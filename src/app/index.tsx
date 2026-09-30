@@ -1,98 +1,132 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Button, Card, Badge } from '../components/ui';
+import Colors from '../constants/colors';
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Wildlife Protection & Monitoring System</Text>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+          <Text style={styles.subtitle}>
+            SE3070 Case Studies in Software Engineering Mobile Application
+          </Text>
+        </View>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
+        <Card style={styles.portalCard}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Ranger Portal</Text>
+            <Badge label="Ranger Access" variant="success" />
+          </View>
+          <Text style={styles.cardDescription}>
+            GPS patrol tracking, incident reporting (poaching / illegal activity), and wildlife risk alert monitoring.
+          </Text>
+          <Button
+            title="Open Ranger Dashboard"
+            variant="primary"
+            onPress={() => router.push('/(ranger)/dashboard')}
           />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+        </Card>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        <Card style={styles.portalCard}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Community Reporter Portal</Text>
+            <Badge label="Villager Access" variant="warning" />
+          </View>
+          <Text style={styles.cardDescription}>
+            Report human-wildlife conflicts (crop damage, animal intrusions) and view historical report statuses.
+          </Text>
+          <Button
+            title="Open Community Dashboard"
+            variant="secondary"
+            onPress={() => router.push('/(community)/dashboard')}
+          />
+        </Card>
+
+        <Card style={styles.portalCard}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Authentication</Text>
+            <Badge label="Account" variant="info" />
+          </View>
+          <Text style={styles.cardDescription}>
+            Sign in with your ranger badge number or community reporter ID.
+          </Text>
+          <Button
+            title="Sign In / Switch Account"
+            variant="outline"
+            onPress={() => router.push('/(auth)/login')}
+          />
+        </Card>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Project initialized with Expo Router, TypeScript, ESLint, Prettier, AsyncStorage, Expo Location, and Expo Camera / ImagePicker.
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    backgroundColor: Colors.light.background,
   },
-  heroSection: {
+  container: {
+    padding: 20,
+  },
+  header: {
+    marginBottom: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
   },
   title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: Colors.light.primaryDark,
     textAlign: 'center',
   },
-  code: {
-    textTransform: 'uppercase',
+  subtitle: {
+    fontSize: 14,
+    color: Colors.light.muted,
+    marginTop: 6,
+    textAlign: 'center',
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  portalCard: {
+    marginBottom: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.light.text,
+  },
+  cardDescription: {
+    fontSize: 14,
+    color: Colors.light.muted,
+    marginBottom: 14,
+    lineHeight: 20,
+  },
+  footer: {
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: '#E5E7EB',
+  },
+  footerText: {
+    fontSize: 12,
+    color: Colors.light.muted,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });
