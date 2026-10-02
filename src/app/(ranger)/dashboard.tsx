@@ -19,7 +19,7 @@ const RECENT_ALERTS = [
     zone: 'Farmland Zone B',
     level: 'HIGH',
     timestamp: '07:43 PM',
-    image: require('../../../assets/images/elephant_e014.jpg'),
+    image: { uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Asian_elephant_-_melbourne_zoo.jpg/320px-Asian_elephant_-_melbourne_zoo.jpg' },
   },
   {
     id: '2',
@@ -27,7 +27,7 @@ const RECENT_ALERTS = [
     zone: 'Waterhole Zone',
     level: 'MEDIUM',
     timestamp: '03:15 PM',
-    image: require('../../../assets/images/elephant_e011.jpg'),
+    image: { uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Elephant_near_ndutu.jpg/320px-Elephant_near_ndutu.jpg' },
   },
 ];
 
@@ -67,7 +67,7 @@ export default function DashboardScreen() {
           {/* Animal Info */}
           <View style={styles.animalRow}>
             <Image
-              source={require('../../../assets/images/elephant_e014.jpg')}
+              source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Asian_elephant_-_melbourne_zoo.jpg/320px-Asian_elephant_-_melbourne_zoo.jpg' }}
               style={styles.animalImage}
             />
             <View style={styles.animalInfo}>
