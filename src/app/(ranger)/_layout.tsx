@@ -1,14 +1,14 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
-import Colors from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
+import Colors from '../../constants/colors';
 
 export default function RangerLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false, // We use a custom header in each screen
+        headerShown: false,
         tabBarActiveTintColor: Colors.light.primaryDark,
         tabBarInactiveTintColor: '#9CA3AF',
         tabBarStyle: {
@@ -40,8 +40,11 @@ export default function RangerLayout() {
           title: 'Alerts',
           tabBarIcon: ({ color, focused }) => (
             <View>
-              <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={24} color={color} />
-              {/* Red notification badge */}
+              <Ionicons
+                name={focused ? 'notifications' : 'notifications-outline'}
+                size={24}
+                color={color}
+              />
               <View style={styles.badge} />
             </View>
           ),
