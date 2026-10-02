@@ -1,25 +1,33 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Image } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  TouchableOpacity,
+  Image,
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { Card, Badge, Button } from '../../components/ui';
-import { WildlifeAlert } from '../../types/alert';
 import Colors from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 
 const RECENT_ALERTS = [
   {
     id: '1',
-    title: 'Elephant E-014',
-    location: 'Farmland Zone B',
+    animalId: 'Elephant E-014',
+    zone: 'Farmland Zone B',
     level: 'HIGH',
     timestamp: '07:43 PM',
+    image: require('../../../assets/images/elephant_e014.jpg'),
   },
   {
     id: '2',
-    title: 'Elephant E-011',
-    location: 'Waterhole Zone',
+    animalId: 'Elephant E-011',
+    zone: 'Waterhole Zone',
     level: 'MEDIUM',
-    timestamp: '05:20 PM',
+    timestamp: '03:15 PM',
+    image: require('../../../assets/images/elephant_e011.jpg'),
   },
 ];
 
@@ -27,61 +35,95 @@ export default function AlertsScreen() {
   const router = useRouter();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        
-        {/* High Risk Alert Banner */}
-        <Card style={styles.alertCard}>
-          <View style={styles.alertHeader}>
-            <Ionicons name="warning" size={32} color={Colors.light.danger} style={styles.alertIcon} />
-            <Text style={styles.alertHeading}>WILDLIFE{'\n'}RISK ALERT</Text>
+    <SafeAreaView style={styles.safeArea}>
+      {/* Custom Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Ionicons name="paw" size={28} color="#FFFFFF" style={styles.pawIcon} />
+          <View>
+            <Text style={styles.headerTitle}>Wildlife Monitoring</Text>
+            <Text style={styles.headerSubtitle}>Live Tracking</Text>
           </View>
-          
-          <View style={styles.animalInfoRow}>
-            {/* Placeholder for Animal Image */}
-            <View style={styles.animalImagePlaceholder}>
-              <Ionicons name="image-outline" size={24} color={Colors.light.muted} />
-            </View>
-            <View style={styles.animalDetails}>
-              <Text style={styles.animalId}>Elephant E-014</Text>
-              <Text style={styles.animalZone}>Farmland Zone B</Text>
-              <Text style={styles.riskLevelText}>Risk Level: <Text style={styles.riskLevelHigh}>HIGH</Text></Text>
-            </View>
-          </View>
-          
-          <Text style={styles.detectedTime}>Detected: 18 May 2025, 07:43 PM</Text>
-          
-          <Button 
-            title="VIEW ALERT" 
-            variant="primary" 
-            onPress={() => router.push('/(ranger)/alerts/e014')} 
-            style={styles.viewAlertBtn}
-          />
-        </Card>
+        </View>
+        <TouchableOpacity style={styles.bellContainer}>
+          <Ionicons name="notifications-outline" size={26} color="#FFFFFF" />
+          <View style={styles.notificationDot} />
+        </TouchableOpacity>
+      </View>
 
-        {/* Recent Alerts List */}
-        <View style={styles.recentSection}>
-          <Text style={styles.recentHeading}>Recent Alerts</Text>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* High Risk Alert Card */}
+        <View style={styles.riskCard}>
+          <View style={styles.riskBanner}>
+            <Ionicons name="warning" size={22} color="#DC2626" />
+            <View style={styles.riskBannerText}>
+              <Text style={styles.riskBannerTitle}>WILDLIFE RISK ALERT</Text>
+              <Text style={styles.riskBannerSubtitle}>A tracked animal has entered a{'\n'}high-risk zone</Text>
+            </View>
+          </View>
+
+          <View style={styles.animalRow}>
+            <Image
+              source={require('../../../assets/images/elephant_e014.jpg')}
+              style={styles.animalImage}
+            />
+            <View style={styles.animalInfo}>
+              <Text style={styles.animalId}>Elephant E-014</Text>
+              <Text style={styles.animalSpecies}>Asian Elephant</Text>
+              <View style={styles.locationRow}>
+                <Ionicons name="location-sharp" size={14} color={Colors.light.muted} />
+                <Text style={styles.locationText}>Farmland Zone B</Text>
+              </View>
+              <View style={styles.riskBadge}>
+                <Text style={styles.riskBadgeText}>HIGH RISK</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.timestampRow}>
+            <Ionicons name="time-outline" size={14} color={Colors.light.muted} />
+            <Text style={styles.timestampText}>Detected: 18 May 2025, 07:43 PM</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.viewAlertButton}
+            onPress={() => router.push('/(ranger)/alert-detail' as any)}
+          >
+            <Text style={styles.viewAlertText}>View Alert</Text>
+            <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Recent Alerts Section */}
+        <View style={styles.recentHeader}>
+          <Text style={styles.recentTitle}>Recent Alerts</Text>
           <TouchableOpacity>
             <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
         </View>
 
         {RECENT_ALERTS.map((alert) => (
-          <TouchableOpacity key={alert.id} style={styles.recentAlertItem} onPress={() => {}}>
-            <View style={styles.recentAlertImagePlaceholder}>
-              <Ionicons name="image-outline" size={16} color={Colors.light.muted} />
+          <TouchableOpacity key={alert.id} style={styles.recentItem} onPress={() => {}}>
+            <Image source={alert.image} style={styles.recentImage} />
+            <View style={styles.recentDetails}>
+              <Text style={styles.recentAnimalId}>{alert.animalId}</Text>
+              <Text style={styles.recentZone}>{alert.zone}</Text>
+              <View style={[
+                styles.recentLevelBadge,
+                alert.level === 'HIGH' ? styles.highBadge : styles.mediumBadge,
+              ]}>
+                <Text style={[
+                  styles.recentLevelText,
+                  alert.level === 'HIGH' ? styles.highText : styles.mediumText,
+                ]}>
+                  {alert.level}
+                </Text>
+              </View>
             </View>
-            <View style={styles.recentAlertDetails}>
-              <Text style={styles.recentAlertId}>{alert.title}</Text>
-              <Text style={styles.recentAlertZone}>{alert.location}</Text>
-              <Text style={[styles.recentAlertLevel, alert.level === 'HIGH' ? styles.levelHigh : styles.levelMedium]}>
-                {alert.level}
-              </Text>
-            </View>
-            <View style={styles.recentAlertTime}>
-              <Text style={styles.timeText}>{alert.timestamp}</Text>
-              <Ionicons name="chevron-forward" size={16} color={Colors.light.muted} />
+            <View style={styles.recentRight}>
+              <Text style={styles.recentTime}>{alert.timestamp}</Text>
+              <Ionicons name="chevron-forward" size={18} color={Colors.light.muted} />
             </View>
           </TouchableOpacity>
         ))}
@@ -92,141 +134,245 @@ export default function AlertsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  scroll: {
-    padding: 16,
-  },
-  alertCard: {
-    borderWidth: 2,
-    borderColor: Colors.light.danger,
-    marginBottom: 24,
-  },
-  alertHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    justifyContent: 'center',
-  },
-  alertIcon: {
-    marginRight: 12,
-  },
-  alertHeading: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: Colors.light.danger,
-    textAlign: 'left',
-  },
-  animalInfoRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  animalImagePlaceholder: {
-    width: 80,
-    height: 80,
-    backgroundColor: Colors.light.border,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  animalDetails: {
-    justifyContent: 'center',
-  },
-  animalId: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.light.text,
-  },
-  animalZone: {
-    fontSize: 14,
-    color: Colors.light.text,
-    marginVertical: 4,
-  },
-  riskLevelText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: Colors.light.text,
-  },
-  riskLevelHigh: {
-    color: Colors.light.danger,
-  },
-  detectedTime: {
-    fontSize: 12,
-    color: Colors.light.muted,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  viewAlertBtn: {
     backgroundColor: Colors.light.primaryDark,
   },
-  recentSection: {
+  header: {
+    backgroundColor: Colors.light.primaryDark,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
   },
-  recentHeading: {
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pawIcon: {
+    marginRight: 10,
+  },
+  headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.light.text,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 1,
+  },
+  bellContainer: {
+    position: 'relative',
+    padding: 4,
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: Colors.light.primaryDark,
+  },
+  scroll: {
+    backgroundColor: '#F3F4F6',
+    padding: 16,
+    paddingBottom: 32,
+  },
+  riskCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  riskBanner: {
+    backgroundColor: '#FEF2F2',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FECACA',
+    gap: 10,
+  },
+  riskBannerText: {
+    flex: 1,
+  },
+  riskBannerTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#DC2626',
+    letterSpacing: 0.5,
+  },
+  riskBannerSubtitle: {
+    fontSize: 12,
+    color: '#7F1D1D',
+    marginTop: 2,
+    lineHeight: 17,
+  },
+  animalRow: {
+    flexDirection: 'row',
+    padding: 14,
+    gap: 14,
+    alignItems: 'flex-start',
+  },
+  animalImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 8,
+  },
+  animalInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  animalId: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  animalSpecies: {
+    fontSize: 13,
+    color: Colors.light.muted,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 2,
+  },
+  locationText: {
+    fontSize: 13,
+    color: Colors.light.muted,
+  },
+  riskBadge: {
+    marginTop: 6,
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  riskBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  timestampRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+  },
+  timestampText: {
+    fontSize: 12,
+    color: Colors.light.muted,
+  },
+  viewAlertButton: {
+    backgroundColor: Colors.light.primaryDark,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 14,
+    gap: 6,
+    margin: 14,
+    marginTop: 4,
+    borderRadius: 8,
+  },
+  viewAlertText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  recentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  recentTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#111827',
   },
   seeAllText: {
     fontSize: 14,
     color: Colors.light.primary,
+    fontWeight: '500',
   },
-  recentAlertItem: {
+  recentItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.light.card,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  recentAlertImagePlaceholder: {
-    width: 50,
-    height: 50,
-    backgroundColor: Colors.light.border,
+  recentImage: {
+    width: 56,
+    height: 56,
     borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
   },
-  recentAlertDetails: {
+  recentDetails: {
     flex: 1,
+    gap: 2,
   },
-  recentAlertId: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.light.text,
+  recentAnimalId: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
   },
-  recentAlertZone: {
+  recentZone: {
     fontSize: 12,
     color: Colors.light.muted,
-    marginVertical: 2,
   },
-  recentAlertLevel: {
-    fontSize: 12,
-    fontWeight: 'bold',
+  recentLevelBadge: {
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
   },
-  levelHigh: {
-    color: Colors.light.danger,
+  highBadge: {
+    backgroundColor: '#FEE2E2',
   },
-  levelMedium: {
-    color: Colors.light.warning,
+  mediumBadge: {
+    backgroundColor: '#FEF3C7',
   },
-  recentAlertTime: {
+  recentLevelText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  highText: {
+    color: '#DC2626',
+  },
+  mediumText: {
+    color: '#D97706',
+  },
+  recentRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
-  timeText: {
+  recentTime: {
     fontSize: 12,
     color: Colors.light.muted,
-    marginRight: 4,
   },
 });
-
