@@ -1,10 +1,11 @@
 import React from 'react';
-import { Stack } from 'expo-router';
+import { Tabs } from 'expo-router';
 import Colors from '../../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RangerLayout() {
   return (
-    <Stack
+    <Tabs
       screenOptions={{
         headerStyle: {
           backgroundColor: Colors.light.primary,
@@ -13,12 +14,53 @@ export default function RangerLayout() {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
+        tabBarActiveTintColor: Colors.light.primary,
       }}
     >
-      <Stack.Screen name="dashboard" options={{ title: 'Ranger Dashboard' }} />
-      <Stack.Screen name="patrol" options={{ title: 'GPS Patrol Tracking' }} />
-      <Stack.Screen name="report-incident" options={{ title: 'Report Incident / Poaching' }} />
-      <Stack.Screen name="alerts" options={{ title: 'Wildlife Risk Alerts' }} />
-    </Stack>
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color }) => <Ionicons name="home-outline" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="alerts"
+        options={{
+          title: 'Alerts',
+          tabBarIcon: ({ color }) => <Ionicons name="notifications-outline" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="map"
+        options={{
+          title: 'Map',
+          tabBarIcon: ({ color }) => <Ionicons name="map-outline" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <Ionicons name="person-outline" size={24} color={color} />,
+        }}
+      />
+      
+      {/* Hide the other screens from the tab bar but keep them in the routing */}
+      <Tabs.Screen
+        name="patrol"
+        options={{
+          href: null,
+          title: 'GPS Patrol Tracking',
+        }}
+      />
+      <Tabs.Screen
+        name="report-incident"
+        options={{
+          href: null,
+          title: 'Report Incident',
+        }}
+      />
+    </Tabs>
   );
 }
