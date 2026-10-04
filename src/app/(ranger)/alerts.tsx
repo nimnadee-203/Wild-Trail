@@ -1,232 +1,548 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Image } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  TouchableOpacity,
+  Image,
+  Alert,
+  Platform,
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { Card, Badge, Button } from '../../components/ui';
-import { WildlifeAlert } from '../../types/alert';
-import Colors from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
+import Colors from '../../constants/colors';
 
-const RECENT_ALERTS = [
+const ELEPHANT_E014_IMG =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Asian_elephant_-_melbourne_zoo.jpg/320px-Asian_elephant_-_melbourne_zoo.jpg';
+const ELEPHANT_E011_IMG =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Elephant_near_ndutu.jpg/320px-Elephant_near_ndutu.jpg';
+const LEOPARD_IMG =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Leopard_africa.jpg/320px-Leopard_africa.jpg';
+
+interface AlertData {
+  id: string;
+  animalId: string;
+  species: string;
+  location: string;
+  distance: string;
+  level: 'HIGH' | 'MEDIUM' | 'LOW';
+  timestamp: string;
+  status: 'PENDING' | 'ACKNOWLEDGED' | 'RESPONDED';
+  image: string;
+  description: string;
+}
+
+const INITIAL_ALERTS: AlertData[] = [
   {
     id: '1',
-    title: 'Elephant E-014',
+    animalId: 'Elephant E-014',
+    species: 'Asian Elephant (Bull, 28 yrs)',
     location: 'Farmland Zone B',
+    distance: '350m to houses',
     level: 'HIGH',
-    timestamp: '07:43 PM',
+    timestamp: 'Today, 07:43 PM',
+    status: 'PENDING',
+    image: ELEPHANT_E014_IMG,
+    description: 'Tracked collar GPS logged crossing outer boundary fence into cultivated paddies.',
   },
   {
     id: '2',
-    title: 'Elephant E-011',
-    location: 'Waterhole Zone',
+    animalId: 'Elephant E-011',
+    species: 'Asian Elephant (Cow, Herd leader)',
+    location: 'Waterhole Zone C',
+    distance: '1.2 km to buffer border',
     level: 'MEDIUM',
-    timestamp: '05:20 PM',
+    timestamp: 'Today, 05:20 PM',
+    status: 'ACKNOWLEDGED',
+    image: ELEPHANT_E011_IMG,
+    description: 'Herd moving along southern migration corridor towards agricultural transition zone.',
+  },
+  {
+    id: '3',
+    animalId: 'Leopard L-003',
+    species: 'Indian Leopard (Male)',
+    location: 'Northern Buffer Boundary',
+    distance: '2.8 km to village',
+    level: 'LOW',
+    timestamp: 'Today, 02:15 PM',
+    status: 'RESPONDED',
+    image: LEOPARD_IMG,
+    description: 'Stationary position inside dense brush for over 3 hours. No conflict risk detected.',
   },
 ];
 
 export default function AlertsScreen() {
   const router = useRouter();
+  const [filter, setFilter] = useState<'ALL' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
+  const [alerts, setAlerts] = useState<AlertData[]>(INITIAL_ALERTS);
+
+  const filteredAlerts = alerts.filter((a) => {
+    if (filter === 'ALL') return true;
+    return a.level === filter;
+  });
+
+  const handleAcknowledge = (id: string, animalId: string) => {
+    setAlerts((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status: 'ACKNOWLEDGED' } : a))
+    );
+    Alert.alert('Alert Acknowledged', `Officer response logged for ${animalId}. Sector rangers notified.`);
+  };
+
+  const handleDispatch = (animalId: string, location: string) => {
+    Alert.alert(
+      'Dispatch Rapid Response Team',
+      `Dispatch nearest field ranger unit to ${location} for ${animalId}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm Dispatch',
+          style: 'default',
+          onPress: () => {
+            Alert.alert('Patrol Dispatched', `Unit 4 dispatched to ${location}. Estimated arrival: 8 mins.`);
+          },
+        },
+      ]
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        
-        {/* High Risk Alert Banner */}
-        <Card style={styles.alertCard}>
-          <View style={styles.alertHeader}>
-            <Ionicons name="warning" size={32} color={Colors.light.danger} style={styles.alertIcon} />
-            <Text style={styles.alertHeading}>WILDLIFE{'\n'}RISK ALERT</Text>
-          </View>
-          
-          <View style={styles.animalInfoRow}>
-            {/* Placeholder for Animal Image */}
-            <View style={styles.animalImagePlaceholder}>
-              <Ionicons name="image-outline" size={24} color={Colors.light.muted} />
-            </View>
-            <View style={styles.animalDetails}>
-              <Text style={styles.animalId}>Elephant E-014</Text>
-              <Text style={styles.animalZone}>Farmland Zone B</Text>
-              <Text style={styles.riskLevelText}>Risk Level: <Text style={styles.riskLevelHigh}>HIGH</Text></Text>
-            </View>
-          </View>
-          
-          <Text style={styles.detectedTime}>Detected: 18 May 2025, 07:43 PM</Text>
-          
-          <Button 
-            title="VIEW ALERT" 
-            variant="primary" 
-            onPress={() => router.push('/(ranger)/alerts/e014' as any)} 
-            style={styles.viewAlertBtn}
-          />
-        </Card>
-
-        {/* Recent Alerts List */}
-        <View style={styles.recentSection}>
-          <Text style={styles.recentHeading}>Recent Alerts</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAllText}>See All</Text>
+    <SafeAreaView style={styles.safeArea}>
+      {/* Top Navigation Bar */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.push('/dashboard')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
+          <View>
+            <Text style={styles.headerTitle}>Wildlife Risk Alerts</Text>
+            <Text style={styles.headerSubtitle}>Active Geofence Breaches & Early Warnings</Text>
+          </View>
         </View>
 
-        {RECENT_ALERTS.map((alert) => (
-          <TouchableOpacity key={alert.id} style={styles.recentAlertItem} onPress={() => {}}>
-            <View style={styles.recentAlertImagePlaceholder}>
-              <Ionicons name="image-outline" size={16} color={Colors.light.muted} />
-            </View>
-            <View style={styles.recentAlertDetails}>
-              <Text style={styles.recentAlertId}>{alert.title}</Text>
-              <Text style={styles.recentAlertZone}>{alert.location}</Text>
-              <Text style={[styles.recentAlertLevel, alert.level === 'HIGH' ? styles.levelHigh : styles.levelMedium]}>
-                {alert.level}
-              </Text>
-            </View>
-            <View style={styles.recentAlertTime}>
-              <Text style={styles.timeText}>{alert.timestamp}</Text>
-              <Ionicons name="chevron-forward" size={16} color={Colors.light.muted} />
-            </View>
+        <View style={styles.alertCountBadge}>
+          <Text style={styles.alertCountText}>{alerts.length} Active</Text>
+        </View>
+      </View>
+
+      {/* Filter Tabs */}
+      <View style={styles.filterRow}>
+        {(['ALL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((lvl) => (
+          <TouchableOpacity
+            key={lvl}
+            style={[styles.filterChip, filter === lvl && styles.filterChipActive]}
+            onPress={() => setFilter(lvl)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.filterChipText,
+                filter === lvl && styles.filterChipTextActive,
+              ]}
+            >
+              {lvl === 'ALL' ? 'All Alerts' : `${lvl}`}
+            </Text>
           </TouchableOpacity>
         ))}
+      </View>
 
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {filteredAlerts.map((alert) => (
+          <View
+            key={alert.id}
+            style={[
+              styles.alertCard,
+              alert.level === 'HIGH' && styles.alertCardHigh,
+            ]}
+          >
+            {/* Header of Alert Card */}
+            <View style={styles.cardHeader}>
+              <View style={styles.badgeRow}>
+                <View
+                  style={[
+                    styles.levelBadge,
+                    alert.level === 'HIGH'
+                      ? styles.levelHigh
+                      : alert.level === 'MEDIUM'
+                      ? styles.levelMedium
+                      : styles.levelLow,
+                  ]}
+                >
+                  <Text style={styles.levelBadgeText}>{alert.level} RISK</Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.statusBadge,
+                    alert.status === 'PENDING'
+                      ? styles.statusPending
+                      : styles.statusActive,
+                  ]}
+                >
+                  <Text style={styles.statusBadgeText}>{alert.status}</Text>
+                </View>
+              </View>
+
+              <Text style={styles.timestampText}>{alert.timestamp}</Text>
+            </View>
+
+            {/* Animal Info */}
+            <View style={styles.animalRow}>
+              <Image source={{ uri: alert.image }} style={styles.animalImage} />
+              <View style={styles.animalInfo}>
+                <Text style={styles.animalId}>{alert.animalId}</Text>
+                <Text style={styles.speciesText}>{alert.species}</Text>
+                <View style={styles.locationRow}>
+                  <Ionicons name="location" size={14} color={Colors.light.danger} />
+                  <Text style={styles.locationText}>{alert.location}</Text>
+                </View>
+                <Text style={styles.distanceText}>📍 Proximity: {alert.distance}</Text>
+              </View>
+            </View>
+
+            <Text style={styles.descriptionText}>{alert.description}</Text>
+
+            {/* Action Buttons */}
+            <View style={styles.actionsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.acknowledgeBtn,
+                  alert.status !== 'PENDING' && styles.btnDisabled,
+                ]}
+                onPress={() => handleAcknowledge(alert.id, alert.animalId)}
+                disabled={alert.status !== 'PENDING'}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={alert.status === 'PENDING' ? 'checkmark-circle-outline' : 'checkmark-done'}
+                  size={16}
+                  color={alert.status === 'PENDING' ? '#FFFFFF' : '#6B7280'}
+                />
+                <Text
+                  style={[
+                    styles.acknowledgeBtnText,
+                    alert.status !== 'PENDING' && styles.btnDisabledText,
+                  ]}
+                >
+                  {alert.status === 'PENDING' ? 'Acknowledge' : 'Acknowledged'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.dispatchBtn}
+                onPress={() => handleDispatch(alert.animalId, alert.location)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="navigate-outline" size={16} color={Colors.light.primaryDark} />
+                <Text style={styles.dispatchBtnText}>Dispatch Team</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.mapPinBtn}
+                onPress={() => router.push('/map')}
+                activeOpacity={0.8}
+                accessibilityLabel="View on map"
+              >
+                <Ionicons name="map-outline" size={18} color={Colors.light.primaryDark} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+
+        {filteredAlerts.length === 0 && (
+          <View style={styles.emptyWrap}>
+            <Ionicons name="shield-checkmark-outline" size={54} color="#059669" />
+            <Text style={styles.emptyTitle}>No Alerts in this Category</Text>
+            <Text style={styles.emptySubtitle}>All collared animals are currently within safe zones.</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: '#F9FAFB',
   },
-  scroll: {
-    padding: 16,
+
+  // Header App Bar
+  header: {
+    backgroundColor: Colors.light.primaryDark,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'android' ? 12 : 10,
+    paddingBottom: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  alertCard: {
-    borderWidth: 2,
-    borderColor: Colors.light.danger,
-    marginBottom: 24,
-  },
-  alertHeader: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    justifyContent: 'center',
+    gap: 12,
   },
-  alertIcon: {
-    marginRight: 12,
-  },
-  alertHeading: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: Colors.light.danger,
-    textAlign: 'left',
-  },
-  animalInfoRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  animalImagePlaceholder: {
-    width: 80,
-    height: 80,
-    backgroundColor: Colors.light.border,
-    borderRadius: 8,
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
   },
-  animalDetails: {
-    justifyContent: 'center',
-  },
-  animalId: {
+  headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.light.text,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
-  animalZone: {
-    fontSize: 14,
-    color: Colors.light.text,
-    marginVertical: 4,
+  headerSubtitle: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 1,
   },
-  riskLevelText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: Colors.light.text,
+  alertCountBadge: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
   },
-  riskLevelHigh: {
-    color: Colors.light.danger,
-  },
-  detectedTime: {
+  alertCountText: {
+    color: '#FFFFFF',
     fontSize: 12,
-    color: Colors.light.muted,
-    marginBottom: 16,
-    textAlign: 'center',
+    fontWeight: '700',
   },
-  viewAlertBtn: {
+
+  // Filter Bar
+  filterRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+  },
+  filterChipActive: {
     backgroundColor: Colors.light.primaryDark,
   },
-  recentSection: {
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4B5563',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+
+  scroll: {
+    padding: 16,
+    paddingBottom: 30,
+  },
+
+  // Alert Card
+  alertCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  alertCardHigh: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#DC2626',
+    borderColor: '#FECACA',
+  },
+
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  recentHeading: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.light.text,
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: Colors.light.primary,
-  },
-  recentAlertItem: {
+  badgeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.light.card,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+    gap: 8,
   },
-  recentAlertImagePlaceholder: {
-    width: 50,
-    height: 50,
-    backgroundColor: Colors.light.border,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  recentAlertDetails: {
-    flex: 1,
-  },
-  recentAlertId: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.light.text,
-  },
-  recentAlertZone: {
-    fontSize: 12,
-    color: Colors.light.muted,
-    marginVertical: 2,
-  },
-  recentAlertLevel: {
-    fontSize: 12,
-    fontWeight: 'bold',
+  levelBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
   },
   levelHigh: {
-    color: Colors.light.danger,
+    backgroundColor: '#DC2626',
   },
   levelMedium: {
-    color: Colors.light.warning,
+    backgroundColor: '#D97706',
   },
-  recentAlertTime: {
+  levelLow: {
+    backgroundColor: '#059669',
+  },
+  levelBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  statusPending: {
+    backgroundColor: '#FEE2E2',
+  },
+  statusActive: {
+    backgroundColor: '#DCFCE7',
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  timestampText: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+
+  animalRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 10,
+  },
+  animalImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 8,
+    backgroundColor: '#E5E7EB',
+  },
+  animalInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  animalId: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  speciesText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 1,
+  },
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 4,
+    gap: 3,
   },
-  timeText: {
+  locationText: {
     fontSize: 12,
-    color: Colors.light.muted,
-    marginRight: 4,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  distanceText: {
+    fontSize: 11,
+    color: '#4B5563',
+    marginTop: 2,
+  },
+
+  descriptionText: {
+    fontSize: 12,
+    color: '#4B5563',
+    lineHeight: 17,
+    backgroundColor: '#F9FAFB',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  acknowledgeBtn: {
+    flex: 1,
+    backgroundColor: Colors.light.primaryDark,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  acknowledgeBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  btnDisabled: {
+    backgroundColor: '#E5E7EB',
+  },
+  btnDisabledText: {
+    color: '#9CA3AF',
+  },
+  dispatchBtn: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: Colors.light.primaryDark,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  dispatchBtnText: {
+    color: Colors.light.primaryDark,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  mapPinBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+
+  emptyWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginTop: 12,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
-
