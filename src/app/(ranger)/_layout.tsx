@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
@@ -9,19 +9,25 @@ export default function RangerLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.light.primaryDark,
+        tabBarActiveTintColor: Colors.light.primary,
         tabBarInactiveTintColor: '#9CA3AF',
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E5E7EB',
-          height: 62,
-          paddingBottom: 8,
-          paddingTop: 6,
+          height: Platform.OS === 'ios' ? 84 : 64,
+          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+          paddingTop: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+          elevation: 10,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: '600',
+          marginTop: 2,
         },
       }}
     >
@@ -39,7 +45,7 @@ export default function RangerLayout() {
         options={{
           title: 'Alerts',
           tabBarIcon: ({ color, focused }) => (
-            <View>
+            <View style={styles.iconWrap}>
               <Ionicons
                 name={focused ? 'notifications' : 'notifications-outline'}
                 size={24}
@@ -69,24 +75,33 @@ export default function RangerLayout() {
         }}
       />
 
-      {/* Hidden screens — not shown in tab bar */}
+      {/* Sub-screens accessed via Home actions, hidden from bottom tab icons */}
       <Tabs.Screen
         name="patrol"
-        options={{ href: null, title: 'GPS Patrol Tracking' }}
+        options={{
+          href: null,
+          title: 'GPS Patrol Tracking',
+        }}
       />
       <Tabs.Screen
         name="report-incident"
-        options={{ href: null, title: 'Report Incident' }}
+        options={{
+          href: null,
+          title: 'Report Incident',
+        }}
       />
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
+  iconWrap: {
+    position: 'relative',
+  },
   badge: {
     position: 'absolute',
-    top: 0,
-    right: -2,
+    top: -1,
+    right: -3,
     width: 9,
     height: 9,
     borderRadius: 5,
