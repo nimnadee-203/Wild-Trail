@@ -15,9 +15,9 @@ export default function LoginScreen() {
   const handleLogin = () => {
     // Auth logic stub to be implemented in future phase
     if (selectedRole === 'ranger') {
-      router.replace('/(ranger)/dashboard');
+      router.replace('/dashboard');
     } else {
-      router.replace('/(community)/dashboard' as any);
+      router.replace('/dashboard');
     }
   };
 
