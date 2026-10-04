@@ -17,7 +17,7 @@ export default function LoginScreen() {
     if (selectedRole === 'ranger') {
       router.replace('/(ranger)/dashboard');
     } else {
-      router.replace('/(community)/dashboard');
+      router.replace('/(community)/dashboard' as any);
     }
   };
 

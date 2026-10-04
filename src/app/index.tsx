@@ -44,7 +44,7 @@ export default function HomeScreen() {
           <Button
             title="Open Community Dashboard"
             variant="secondary"
-            onPress={() => router.push('/(community)/dashboard')}
+            onPress={() => router.push('/(community)/dashboard' as any)}
           />
         </Card>
 
