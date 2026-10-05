@@ -50,6 +50,21 @@ export default function HomeScreen() {
 
         <Card style={styles.portalCard}>
           <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Park Manager Dashboard</Text>
+            <Badge label="Manager Access" variant="info" />
+          </View>
+          <Text style={styles.cardDescription}>
+            Monitor park activity, coordinate patrols, respond to alerts, and generate operational reports.
+          </Text>
+          <Button
+            title="Open Manager Dashboard"
+            variant="primary"
+            onPress={() => router.push('/(manager)/overview' as any)}
+          />
+        </Card>
+
+        <Card style={styles.portalCard}>
+          <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Authentication</Text>
             <Badge label="Account" variant="info" />
           </View>

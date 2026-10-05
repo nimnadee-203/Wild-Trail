@@ -21,6 +21,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ title: 'Wildlife Protection Portal' }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(ranger)" options={{ headerShown: false }} />
+        <Stack.Screen name="(manager)" options={{ headerShown: false }} />
         <Stack.Screen name="(community)" options={{ headerShown: false }} />
       </Stack>
     </>
