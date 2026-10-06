@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,28 +11,40 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../../constants/colors';
-
-const ALERT_DB: Record<string, any> = {
-  '1': {
-    id: '1',
-    animalId: 'E-014',
-    location: 'Farmland Zone B',
-    level: 'HIGH',
-    timestamp: '18 May 2025, 07:44 PM',
-  },
-  '2': {
-    id: '2',
-    animalId: 'E-011',
-    location: 'Waterhole Zone C',
-    level: 'MEDIUM',
-    timestamp: 'Today, 05:21 PM',
-  }
-};
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../services/firebaseConfig';
 
 export default function ResponseConfirmationScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const alert = ALERT_DB[id as string] || ALERT_DB['1'];
+  const [alert, setAlert] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchAlert = async () => {
+      if (!id) return;
+      const docRef = doc(db, 'alerts', id as string);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setAlert({ id: docSnap.id, ...docSnap.data() });
+      }
+    };
+    fetchAlert();
+  }, [id]);
+
+  if (!alert) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Confirming response...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>

@@ -12,7 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../../constants/colors';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
 
 export default function AlertDetailsScreen() {
@@ -151,7 +151,15 @@ export default function AlertDetailsScreen() {
         {/* Action Button */}
         <TouchableOpacity
           style={styles.actionBtn}
-          onPress={() => router.push({ pathname: '/alerts/confirm', params: { id: alert.id } })}
+          onPress={async () => {
+            try {
+              const docRef = doc(db, 'alerts', alert.id);
+              await updateDoc(docRef, { status: 'RESPONDED' });
+              router.push({ pathname: '/alerts/confirm', params: { id: alert.id } });
+            } catch (error) {
+              console.error(error);
+            }
+          }}
           activeOpacity={0.8}
         >
           <Text style={styles.actionBtnText}>Acknowledge & Respond</Text>
