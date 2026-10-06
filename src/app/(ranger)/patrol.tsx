@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, Badge } from '../../components/ui';
 import { useLocation } from '../../hooks/useLocation';
 import { formatCoordinates } from '../../utils/formatting';
 import Colors from '../../constants/colors';
 
 export default function PatrolScreen() {
+  const router = useRouter();
   const { location, errorMsg, isLoading, refreshLocation } = useLocation();
   const [isPatrolling, setIsPatrolling] = useState(false);
   const [pointCount, setPointCount] = useState(0);
@@ -19,20 +22,43 @@ export default function PatrolScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Top Header Navigation Bar */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.push('/dashboard')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View>
+            <Text style={styles.headerTitle}>GPS Patrol Tracking</Text>
+            <Text style={styles.headerSubtitle}>Field Ranger Path & Breadcrumbs</Text>
+          </View>
+        </View>
+
+        <Badge
+          label={isPatrolling ? 'Patrol Active' : 'Standby'}
+          variant={isPatrolling ? 'success' : 'info'}
+        />
+      </View>
+
       <ScrollView contentContainerStyle={styles.scroll}>
         <Card style={styles.statusCard}>
           <View style={styles.statusRow}>
             <Text style={styles.sectionTitle}>Patrol Session</Text>
-            <Badge
-              label={isPatrolling ? 'Patrol Active' : 'Standby'}
-              variant={isPatrolling ? 'success' : 'info'}
+            <Ionicons
+              name={isPatrolling ? 'walk' : 'pause-circle-outline'}
+              size={24}
+              color={isPatrolling ? '#15803D' : '#6B7280'}
             />
           </View>
 
           <Text style={styles.statLabel}>Recorded GPS Points: {pointCount}</Text>
 
           <Button
-            title={isPatrolling ? 'Stop Patrol' : 'Start GPS Patrol'}
+            title={isPatrolling ? 'Stop Patrol Session' : 'Start GPS Patrol'}
             variant={isPatrolling ? 'danger' : 'primary'}
             onPress={togglePatrol}
             style={styles.patrolBtn}
@@ -76,10 +102,43 @@ export default function PatrolScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: '#F9FAFB',
+  },
+  header: {
+    backgroundColor: Colors.light.primaryDark,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'android' ? 12 : 10,
+    paddingBottom: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 1,
   },
   scroll: {
     padding: 16,
+    paddingBottom: 32,
   },
   statusCard: {
     marginBottom: 16,
