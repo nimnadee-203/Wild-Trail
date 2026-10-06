@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,37 +12,40 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../../constants/colors';
-
-// Static placeholder data mirroring the parent index
-const ALERT_DB: Record<string, any> = {
-  '1': {
-    id: '1',
-    animalId: 'Elephant E-014',
-    species: 'Asian Elephant',
-    location: 'Farmland Zone B',
-    level: 'HIGH',
-    timestamp: '18 May 2025, 07:43 PM',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Asian_elephant_-_melbourne_zoo.jpg/320px-Asian_elephant_-_melbourne_zoo.jpg',
-    latitude: '6.298245° S',
-    longitude: '81.339256° E',
-  },
-  '2': {
-    id: '2',
-    animalId: 'Elephant E-011',
-    species: 'Asian Elephant',
-    location: 'Waterhole Zone C',
-    level: 'MEDIUM',
-    timestamp: 'Today, 05:20 PM',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Elephant_near_ndutu.jpg/320px-Elephant_near_ndutu.jpg',
-    latitude: '6.301122° S',
-    longitude: '81.341100° E',
-  }
-};
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../services/firebaseConfig';
 
 export default function AlertDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const alert = ALERT_DB[id as string] || ALERT_DB['1'];
+  const [alert, setAlert] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchAlert = async () => {
+      if (!id) return;
+      const docRef = doc(db, 'alerts', id as string);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setAlert({ id: docSnap.id, ...docSnap.data() });
+      }
+    };
+    fetchAlert();
+  }, [id]);
+
+  if (!alert) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Loading alert details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
