@@ -4,7 +4,7 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
+  apiKey: "AIzaSyCicMF7Sos7NZgHjJ80Z_FiMI0wrpihNps",
   authDomain: "wildtrail-a7918.firebaseapp.com",
   projectId: "wildtrail-a7918",
   storageBucket: "wildtrail-a7918.firebasestorage.app",
