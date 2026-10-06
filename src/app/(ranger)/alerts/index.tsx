@@ -63,35 +63,60 @@ export default function AlertsScreen() {
     try {
       const alertRef = doc(db, 'alerts', id);
       await updateDoc(alertRef, { status: 'ACKNOWLEDGED' });
-      Alert.alert('Alert Acknowledged', `Officer response logged for ${animalId}. Sector rangers notified.`);
+      if (Platform.OS === 'web') {
+        window.alert(`Officer response logged for ${animalId}. Sector rangers notified.`);
+      } else {
+        Alert.alert('Alert Acknowledged', `Officer response logged for ${animalId}. Sector rangers notified.`);
+      }
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Failed to acknowledge alert.');
+      if (Platform.OS === 'web') {
+        window.alert('Failed to acknowledge alert.');
+      } else {
+        Alert.alert('Error', 'Failed to acknowledge alert.');
+      }
     }
   };
 
   const handleDispatch = (id: string, animalId: string, location: string) => {
-    Alert.alert(
-      'Dispatch Rapid Response Team',
-      `Dispatch nearest field ranger unit to ${location} for ${animalId}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm Dispatch',
-          style: 'default',
-          onPress: async () => {
-            try {
-              const alertRef = doc(db, 'alerts', id);
-              await updateDoc(alertRef, { status: 'RESPONDED' });
-              Alert.alert('Patrol Dispatched', `Unit 4 dispatched to ${location}. Estimated arrival: 8 mins.`);
-            } catch (error) {
-              console.error(error);
-              Alert.alert('Error', 'Failed to dispatch team.');
-            }
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(`Dispatch nearest field ranger unit to ${location} for ${animalId}?`);
+      if (confirmed) {
+        const dispatchAction = async () => {
+          try {
+            const alertRef = doc(db, 'alerts', id);
+            await updateDoc(alertRef, { status: 'RESPONDED' });
+            window.alert(`Unit 4 dispatched to ${location}. Estimated arrival: 8 mins.`);
+          } catch (error) {
+            console.error(error);
+            window.alert('Failed to dispatch team.');
+          }
+        };
+        dispatchAction();
+      }
+    } else {
+      Alert.alert(
+        'Dispatch Rapid Response Team',
+        `Dispatch nearest field ranger unit to ${location} for ${animalId}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Confirm Dispatch',
+            style: 'default',
+            onPress: async () => {
+              try {
+                const alertRef = doc(db, 'alerts', id);
+                await updateDoc(alertRef, { status: 'RESPONDED' });
+                Alert.alert('Patrol Dispatched', `Unit 4 dispatched to ${location}. Estimated arrival: 8 mins.`);
+              } catch (error) {
+                console.error(error);
+                Alert.alert('Error', 'Failed to dispatch team.');
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   return (
