@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button, Card, Badge } from '../components/ui';
+import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Badge, Button, Card } from '../components/ui';
 import Colors from '../constants/colors';
 
 export default function HomeScreen() {
@@ -11,7 +10,9 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Wildlife Protection & Monitoring System</Text>
+          <Text style={styles.title}>
+            Wildlife Protection & Monitoring System
+          </Text>
 
           <Text style={styles.subtitle}>
             SE3070 Case Studies in Software Engineering Mobile Application
@@ -23,9 +24,12 @@ export default function HomeScreen() {
             <Text style={styles.cardTitle}>Ranger Portal</Text>
             <Badge label="Ranger Access" variant="success" />
           </View>
+
           <Text style={styles.cardDescription}>
-            GPS patrol tracking, incident reporting (poaching / illegal activity), and wildlife risk alert monitoring.
+            GPS patrol tracking, incident reporting (poaching / illegal activity),
+            and wildlife risk alert monitoring.
           </Text>
+
           <Button
             title="Open Ranger Dashboard"
             variant="primary"
@@ -38,13 +42,16 @@ export default function HomeScreen() {
             <Text style={styles.cardTitle}>Community Reporter Portal</Text>
             <Badge label="Villager Access" variant="warning" />
           </View>
+
           <Text style={styles.cardDescription}>
-            Report human-wildlife conflicts (crop damage, animal intrusions) and view historical report statuses.
+            Report human-wildlife conflicts (crop damage, animal intrusions)
+            and view historical report statuses.
           </Text>
+
           <Button
-            title="Open Community Dashboard"
+            title="Community Dashboard Unavailable"
             variant="secondary"
-            onPress={() => router.push('/(community)/dashboard' as any)}
+            disabled
           />
         </Card>
 
@@ -53,9 +60,12 @@ export default function HomeScreen() {
             <Text style={styles.cardTitle}>Park Manager Dashboard</Text>
             <Badge label="Manager Access" variant="info" />
           </View>
+
           <Text style={styles.cardDescription}>
-            Monitor park activity, coordinate patrols, respond to alerts, and generate operational reports.
+            Monitor park activity, coordinate patrols, respond to alerts,
+            and generate operational reports.
           </Text>
+
           <Button
             title="Open Manager Dashboard"
             variant="primary"
@@ -68,9 +78,11 @@ export default function HomeScreen() {
             <Text style={styles.cardTitle}>Authentication</Text>
             <Badge label="Account" variant="info" />
           </View>
+
           <Text style={styles.cardDescription}>
             Sign in with your ranger badge number or community reporter ID.
           </Text>
+
           <Button
             title="Sign In / Switch Account"
             variant="outline"
@@ -80,7 +92,8 @@ export default function HomeScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Project initialized with Expo Router, TypeScript, ESLint, Prettier, AsyncStorage, Expo Location, and Expo Camera / ImagePicker.
+            Project initialized with Expo Router, TypeScript, ESLint,
+            Prettier, AsyncStorage, Expo Location, and Expo Camera / ImagePicker.
           </Text>
         </View>
       </ScrollView>

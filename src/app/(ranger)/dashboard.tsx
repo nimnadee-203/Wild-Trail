@@ -103,6 +103,23 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity
+          style={styles.reportIncidentBtn}
+          onPress={() => router.push('/(ranger)/report-incident' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.reportIncidentIcon}>
+            <Ionicons name="add" size={22} color={Colors.light.primaryDark} />
+          </View>
+          <View style={styles.reportIncidentText}>
+            <Text style={styles.reportIncidentTitle}>Report an Incident</Text>
+            <Text style={styles.reportIncidentSubtitle}>
+              Record a site observation or wildlife incident
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={Colors.light.primaryDark} />
+        </TouchableOpacity>
+
         {/* Recent Alerts Section */}
         <View style={styles.recentSection}>
           <Text style={styles.recentTitle}>Recent Alerts</Text>
@@ -319,6 +336,40 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+
+  // Incident reporting entry point
+  reportIncidentBtn: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.light.primaryDark,
+    padding: 12,
+    marginBottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reportIncidentIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#EAF5EC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  reportIncidentText: {
+    flex: 1,
+  },
+  reportIncidentTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.light.primaryDark,
+  },
+  reportIncidentSubtitle: {
+    fontSize: 11,
+    color: Colors.light.muted,
+    marginTop: 3,
   },
 
   // Recent Alerts
