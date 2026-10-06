@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Colors from '../../constants/colors';
+import Colors from '../../../constants/colors';
 
 const ELEPHANT_E014_IMG =
   'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Asian_elephant_-_melbourne_zoo.jpg/320px-Asian_elephant_-_melbourne_zoo.jpg';
@@ -153,12 +153,14 @@ export default function AlertsScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {filteredAlerts.map((alert) => (
-          <View
+          <TouchableOpacity
             key={alert.id}
             style={[
               styles.alertCard,
               alert.level === 'HIGH' && styles.alertCardHigh,
             ]}
+            onPress={() => router.push({ pathname: '/alerts/[id]', params: { id: alert.id } })}
+            activeOpacity={0.9}
           >
             {/* Header of Alert Card */}
             <View style={styles.cardHeader}>
@@ -251,7 +253,7 @@ export default function AlertsScreen() {
                 <Ionicons name="map-outline" size={18} color={Colors.light.primaryDark} />
               </TouchableOpacity>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
 
         {filteredAlerts.length === 0 && (
