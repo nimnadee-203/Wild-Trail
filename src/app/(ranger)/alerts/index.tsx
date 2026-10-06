@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../../constants/colors';
+import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../../services/firebaseConfig';
 
 const ELEPHANT_E014_IMG =
   'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Asian_elephant_-_melbourne_zoo.jpg/320px-Asian_elephant_-_melbourne_zoo.jpg';
@@ -34,63 +36,41 @@ interface AlertData {
   description: string;
 }
 
-const INITIAL_ALERTS: AlertData[] = [
-  {
-    id: '1',
-    animalId: 'Elephant E-014',
-    species: 'Asian Elephant (Bull, 28 yrs)',
-    location: 'Farmland Zone B',
-    distance: '350m to houses',
-    level: 'HIGH',
-    timestamp: 'Today, 07:43 PM',
-    status: 'PENDING',
-    image: ELEPHANT_E014_IMG,
-    description: 'Tracked collar GPS logged crossing outer boundary fence into cultivated paddies.',
-  },
-  {
-    id: '2',
-    animalId: 'Elephant E-011',
-    species: 'Asian Elephant (Cow, Herd leader)',
-    location: 'Waterhole Zone C',
-    distance: '1.2 km to buffer border',
-    level: 'MEDIUM',
-    timestamp: 'Today, 05:20 PM',
-    status: 'ACKNOWLEDGED',
-    image: ELEPHANT_E011_IMG,
-    description: 'Herd moving along southern migration corridor towards agricultural transition zone.',
-  },
-  {
-    id: '3',
-    animalId: 'Leopard L-003',
-    species: 'Indian Leopard (Male)',
-    location: 'Northern Buffer Boundary',
-    distance: '2.8 km to village',
-    level: 'LOW',
-    timestamp: 'Today, 02:15 PM',
-    status: 'RESPONDED',
-    image: LEOPARD_IMG,
-    description: 'Stationary position inside dense brush for over 3 hours. No conflict risk detected.',
-  },
-];
-
 export default function AlertsScreen() {
   const router = useRouter();
   const [filter, setFilter] = useState<'ALL' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
-  const [alerts, setAlerts] = useState<AlertData[]>(INITIAL_ALERTS);
+  const [alerts, setAlerts] = useState<AlertData[]>([]);
+
+  useEffect(() => {
+    const alertsRef = collection(db, 'alerts');
+    const unsubscribe = onSnapshot(alertsRef, (snapshot) => {
+      const fetchedAlerts: AlertData[] = [];
+      snapshot.forEach((docSnapshot) => {
+        fetchedAlerts.push({ id: docSnapshot.id, ...docSnapshot.data() } as AlertData);
+      });
+      setAlerts(fetchedAlerts);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const filteredAlerts = alerts.filter((a) => {
     if (filter === 'ALL') return true;
     return a.level === filter;
   });
 
-  const handleAcknowledge = (id: string, animalId: string) => {
-    setAlerts((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: 'ACKNOWLEDGED' } : a))
-    );
-    Alert.alert('Alert Acknowledged', `Officer response logged for ${animalId}. Sector rangers notified.`);
+  const handleAcknowledge = async (id: string, animalId: string) => {
+    try {
+      const alertRef = doc(db, 'alerts', id);
+      await updateDoc(alertRef, { status: 'ACKNOWLEDGED' });
+      Alert.alert('Alert Acknowledged', `Officer response logged for ${animalId}. Sector rangers notified.`);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Failed to acknowledge alert.');
+    }
   };
 
-  const handleDispatch = (animalId: string, location: string) => {
+  const handleDispatch = (id: string, animalId: string, location: string) => {
     Alert.alert(
       'Dispatch Rapid Response Team',
       `Dispatch nearest field ranger unit to ${location} for ${animalId}?`,
@@ -99,8 +79,15 @@ export default function AlertsScreen() {
         {
           text: 'Confirm Dispatch',
           style: 'default',
-          onPress: () => {
-            Alert.alert('Patrol Dispatched', `Unit 4 dispatched to ${location}. Estimated arrival: 8 mins.`);
+          onPress: async () => {
+            try {
+              const alertRef = doc(db, 'alerts', id);
+              await updateDoc(alertRef, { status: 'RESPONDED' });
+              Alert.alert('Patrol Dispatched', `Unit 4 dispatched to ${location}. Estimated arrival: 8 mins.`);
+            } catch (error) {
+              console.error(error);
+              Alert.alert('Error', 'Failed to dispatch team.');
+            }
           },
         },
       ]
@@ -237,7 +224,7 @@ export default function AlertsScreen() {
 
               <TouchableOpacity
                 style={styles.dispatchBtn}
-                onPress={() => handleDispatch(alert.animalId, alert.location)}
+                onPress={() => handleDispatch(alert.id, alert.animalId, alert.location)}
                 activeOpacity={0.8}
               >
                 <Ionicons name="navigate-outline" size={16} color={Colors.light.primaryDark} />
