@@ -10,6 +10,7 @@ import {
   ActualPathPoint,
   ScheduledPatrol,
   MarkedWaypoint,
+  PatrolObservation,
 } from '../../types/patrol';
 import { storageService } from '../../storage/asyncStorage';
 import { STORAGE_KEYS } from '../../storage/keys';
@@ -164,10 +165,31 @@ export const patrolApiService = {
       pointCount: 1,
       actualPath: [initialPoint],
       markedWaypoints: [],
+      observations: [],
     };
 
     await storageService.setItem(STORAGE_KEYS.ACTIVE_PATROL, session);
+    await storageService.setItem(STORAGE_KEYS.RANGER_STATUS, 'ON_PATROL' as RangerStatus);
     return session;
+  },
+
+  async setRangerStatus(status: RangerStatus): Promise<void> {
+    await storageService.setItem(STORAGE_KEYS.RANGER_STATUS, status);
+    const session = await storageService.getItem<ActivePatrolSession>(STORAGE_KEYS.ACTIVE_PATROL);
+    if (session) {
+      await storageService.setItem(STORAGE_KEYS.ACTIVE_PATROL, {
+        ...session,
+        rangerStatus: status,
+      });
+    }
+  },
+
+  async getRangerStatus(): Promise<RangerStatus> {
+    const status = await storageService.getItem<RangerStatus>(STORAGE_KEYS.RANGER_STATUS);
+    if (status) return status;
+    const session = await storageService.getItem<ActivePatrolSession>(STORAGE_KEYS.ACTIVE_PATROL);
+    if (session) return session.rangerStatus;
+    return 'AVAILABLE';
   },
 
   async addActualPathPoint(point: ActualPathPoint): Promise<ActivePatrolSession | null> {
@@ -199,6 +221,20 @@ export const patrolApiService = {
     return updatedSession;
   },
 
+  async addPatrolObservation(observation: PatrolObservation): Promise<ActivePatrolSession | null> {
+    const session = await storageService.getItem<ActivePatrolSession>(STORAGE_KEYS.ACTIVE_PATROL);
+    if (!session) return null;
+
+    const updatedObservations = [...(session.observations || []), observation];
+    const updatedSession: ActivePatrolSession = {
+      ...session,
+      observations: updatedObservations,
+    };
+
+    await storageService.setItem(STORAGE_KEYS.ACTIVE_PATROL, updatedSession);
+    return updatedSession;
+  },
+
   async getActivePatrolSession(): Promise<ActivePatrolSession | null> {
     return storageService.getItem<ActivePatrolSession>(STORAGE_KEYS.ACTIVE_PATROL);
   },
@@ -218,6 +254,7 @@ export const patrolApiService = {
 
     // 2. Clear Active Patrol Session & Return Ranger Status to AVAILABLE
     await storageService.removeItem(STORAGE_KEYS.ACTIVE_PATROL);
+    await storageService.setItem(STORAGE_KEYS.RANGER_STATUS, 'AVAILABLE' as RangerStatus);
     return 'AVAILABLE';
   },
 

@@ -18,7 +18,13 @@ import { useLocation } from '../../hooks/useLocation';
 import { formatCoordinates } from '../../utils/formatting';
 import Colors from '../../constants/colors';
 import { patrolApiService } from '../../services/api/patrols';
-import { ActualPathPoint, MarkedWaypoint, WaypointType } from '../../types/patrol';
+import {
+  ActualPathPoint,
+  MarkedWaypoint,
+  WaypointType,
+  PatrolObservation,
+  ObservationType,
+} from '../../types/patrol';
 
 const WAYPOINT_TYPES: { type: WaypointType; label: string; icon: string; color: string }[] = [
   { type: 'OBSERVATION', label: 'Observation', icon: 'eye-outline', color: '#0284C7' },
@@ -28,6 +34,15 @@ const WAYPOINT_TYPES: { type: WaypointType; label: string; icon: string; color: 
   { type: 'POACHING_TRAIL', label: 'Poaching Trail', icon: 'footsteps-outline', color: '#D97706' },
   { type: 'FENCE_BREACH', label: 'Fence Breach', icon: 'warning-outline', color: '#DC2626' },
   { type: 'GENERAL', label: 'General Marker', icon: 'location-outline', color: '#6B7280' },
+];
+
+const OBSERVATION_TYPES: { type: ObservationType; icon: string }[] = [
+  { type: 'Wildlife Sighting', icon: 'paw-outline' },
+  { type: 'Illegal Activity', icon: 'warning-outline' },
+  { type: 'Habitat Condition', icon: 'leaf-outline' },
+  { type: 'Fence Damage', icon: 'construct-outline' },
+  { type: 'Water Source', icon: 'water-outline' },
+  { type: 'Other', icon: 'clipboard-outline' },
 ];
 
 function calculatePathDistance(path: ActualPathPoint[]): number {
@@ -89,6 +104,13 @@ export default function PatrolScreen() {
   const [selectedCategory, setSelectedCategory] = useState<WaypointType>('OBSERVATION');
   const [waypointNotes, setWaypointNotes] = useState('');
 
+  // Add Observation State & Modal Controls
+  const [observations, setObservations] = useState<PatrolObservation[]>([]);
+  const [obsModalVisible, setObsModalVisible] = useState(false);
+  const [selectedObsType, setSelectedObsType] = useState<ObservationType>('Wildlife Sighting');
+  const [obsDescription, setObsDescription] = useState('');
+  const [obsDropdownOpen, setObsDropdownOpen] = useState(false);
+
   // Initialize actualPath with default starting coordinate point
   const [actualPath, setActualPath] = useState<ActualPathPoint[]>([
     {
@@ -108,6 +130,9 @@ export default function PatrolScreen() {
         }
         if (activeSession.markedWaypoints && activeSession.markedWaypoints.length > 0) {
           setMarkedWaypoints(activeSession.markedWaypoints);
+        }
+        if (activeSession.observations && activeSession.observations.length > 0) {
+          setObservations(activeSession.observations);
         }
       }
     }
@@ -160,7 +185,7 @@ export default function PatrolScreen() {
       setIsPatrolling(false);
       Alert.alert(
         'Patrol Session Ended',
-        `Recorded total ${actualPath.length} GPS breadcrumbs (${calculatePathDistance(actualPath)} km) and ${markedWaypoints.length} marked waypoints.\nPatrol status updated to COMPLETED and Ranger status returned to AVAILABLE.`,
+        `Recorded total ${actualPath.length} GPS breadcrumbs (${calculatePathDistance(actualPath)} km), ${markedWaypoints.length} waypoints, and ${observations.length} observations.\nPatrol status updated to COMPLETED and Ranger status returned to AVAILABLE.`,
         [
           { text: 'Return to Dashboard', onPress: () => router.push('/dashboard') },
           { text: 'Stay Here', style: 'cancel' },
@@ -171,7 +196,7 @@ export default function PatrolScreen() {
     }
   };
 
-  // Mark Waypoint Handler
+  // Mark Waypoint Handlers
   const handleOpenMarkWaypoint = () => {
     refreshLocation();
     setSelectedCategory('OBSERVATION');
@@ -183,7 +208,6 @@ export default function PatrolScreen() {
     const now = new Date();
     const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
-    // Acquire current GPS position
     const currentLat = location?.latitude ?? actualPath[actualPath.length - 1]?.latitude ?? 6.3672;
     const currentLng = location?.longitude ?? actualPath[actualPath.length - 1]?.longitude ?? 81.503;
 
@@ -204,6 +228,49 @@ export default function PatrolScreen() {
     Alert.alert(
       'Waypoint Recorded',
       `Marked ${selectedCategory.replace('_', ' ')} at (${newWaypoint.latitude}°, ${newWaypoint.longitude}°) at ${formattedTime}.`
+    );
+  };
+
+  // Add Observation Handlers
+  const handleOpenAddObservation = () => {
+    refreshLocation();
+    setSelectedObsType('Wildlife Sighting');
+    setObsDescription('Fresh elephant footprints');
+    setObsDropdownOpen(false);
+    setObsModalVisible(true);
+  };
+
+  const handleSaveObservation = async () => {
+    if (!obsDescription.trim()) {
+      Alert.alert('Description Required', 'Please enter a description for this observation.');
+      return;
+    }
+
+    const now = new Date();
+    const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const currentLat = location?.latitude ?? actualPath[actualPath.length - 1]?.latitude ?? 6.3672;
+    const currentLng = location?.longitude ?? actualPath[actualPath.length - 1]?.longitude ?? 81.503;
+
+    const newObservation: PatrolObservation = {
+      id: `OBS-${Date.now()}`,
+      patrolId: patrolId || 'PAT-0156',
+      patrolName: patrolName,
+      park: park,
+      latitude: parseFloat(currentLat.toFixed(4)),
+      longitude: parseFloat(currentLng.toFixed(4)),
+      timestamp: formattedTime,
+      type: selectedObsType,
+      description: obsDescription.trim(),
+    };
+
+    await patrolApiService.addPatrolObservation(newObservation);
+    setObservations((prev) => [...prev, newObservation]);
+    setObsModalVisible(false);
+
+    Alert.alert(
+      'Observation Saved',
+      `Observation "${newObservation.type}" associated with patrol ${newObservation.patrolId} and current location (${newObservation.latitude}°, ${newObservation.longitude}°).`
     );
   };
 
@@ -316,24 +383,40 @@ export default function PatrolScreen() {
 
             <View style={styles.statBox}>
               <Text style={styles.statValueText}>{markedWaypoints.length}</Text>
-              <Text style={styles.statLabelText}>Marked Waypoints</Text>
+              <Text style={styles.statLabelText}>Waypoints</Text>
+            </View>
+
+            <View style={styles.statBox}>
+              <Text style={styles.statValueText}>{observations.length}</Text>
+              <Text style={styles.statLabelText}>Observations</Text>
             </View>
 
             <View style={styles.statBox}>
               <Text style={styles.statValueText}>{currentDistanceKm} km</Text>
-              <Text style={styles.statLabelText}>Travelled Path</Text>
+              <Text style={styles.statLabelText}>Distance</Text>
             </View>
           </View>
 
-          {/* Mark Waypoint Action Button */}
-          <TouchableOpacity
-            style={styles.markWaypointActionBtn}
-            onPress={handleOpenMarkWaypoint}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="location" size={18} color="#FFFFFF" />
-            <Text style={styles.markWaypointActionBtnText}>Mark Waypoint at Current GPS</Text>
-          </TouchableOpacity>
+          {/* Action Buttons Row: Mark Waypoint & Add Observation */}
+          <View style={styles.actionButtonsRow}>
+            <TouchableOpacity
+              style={styles.markWaypointActionBtn}
+              onPress={handleOpenMarkWaypoint}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="location" size={16} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>Mark Waypoint</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.addObservationActionBtn}
+              onPress={handleOpenAddObservation}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="eye" size={16} color="#FFFFFF" />
+              <Text style={styles.actionBtnText}>Add Observation</Text>
+            </TouchableOpacity>
+          </View>
 
           <Button
             title={isPatrolling ? 'Stop Patrol Session' : 'Start GPS Patrol'}
@@ -342,6 +425,38 @@ export default function PatrolScreen() {
             style={styles.patrolBtn}
           />
         </Card>
+
+        {/* Recorded Patrol Observations List Card */}
+        {observations.length > 0 && (
+          <Card style={styles.waypointListCard}>
+            <View style={styles.pathHeaderRow}>
+              <View style={styles.pathHeaderTitleGroup}>
+                <Ionicons name="eye" size={20} color="#0284C7" />
+                <Text style={styles.sectionTitle}>Patrol Observations ({observations.length})</Text>
+              </View>
+            </View>
+
+            <View style={styles.pathListContainer}>
+              {observations.map((obs) => (
+                <View key={obs.id} style={styles.observationRowCard}>
+                  <View style={styles.obsIconWrap}>
+                    <Ionicons name="paw" size={16} color="#0284C7" />
+                  </View>
+                  <View style={styles.waypointRowBody}>
+                    <View style={styles.waypointTitleRow}>
+                      <Text style={styles.waypointTypeTitle}>{obs.type}</Text>
+                      <Text style={styles.waypointTimeText}>{obs.timestamp}</Text>
+                    </View>
+                    <Text style={styles.waypointCoordsSub}>
+                      📍 {obs.latitude}° N, {obs.longitude}° E • Patrol: {obs.patrolId || 'Active'}
+                    </Text>
+                    <Text style={styles.waypointNotesText}>{`"${obs.description}"`}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </Card>
+        )}
 
         {/* Recorded Marked Waypoints List Card */}
         {markedWaypoints.length > 0 && (
@@ -354,7 +469,7 @@ export default function PatrolScreen() {
             </View>
 
             <View style={styles.pathListContainer}>
-              {markedWaypoints.map((wp, idx) => {
+              {markedWaypoints.map((wp) => {
                 const config = WAYPOINT_TYPES.find((item) => item.type === wp.type) || WAYPOINT_TYPES[6];
                 return (
                   <View key={wp.id} style={styles.waypointRowCard}>
@@ -559,6 +674,124 @@ export default function PatrolScreen() {
               <TouchableOpacity
                 style={styles.cancelModalBtn}
                 onPress={() => setWaypointModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelModalBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Observation Modal */}
+      <Modal
+        visible={obsModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setObsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContentCard}>
+            <View style={styles.modalHeaderRow}>
+              <View style={styles.modalTitleGroup}>
+                <Ionicons name="eye" size={22} color="#0284C7" />
+                <Text style={styles.modalTitleText}>Add Observation</Text>
+              </View>
+              <TouchableOpacity onPress={() => setObsModalVisible(false)} activeOpacity={0.7}>
+                <Ionicons name="close" size={22} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Type Dropdown Picker */}
+              <Text style={styles.fieldLabelText}>TYPE</Text>
+              <TouchableOpacity
+                style={styles.dropdownSelectorBtn}
+                onPress={() => setObsDropdownOpen(!obsDropdownOpen)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.dropdownSelectorValueText}>[ {selectedObsType} ]</Text>
+                <Ionicons
+                  name={obsDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                  size={18}
+                  color="#0284C7"
+                />
+              </TouchableOpacity>
+
+              {obsDropdownOpen && (
+                <View style={styles.dropdownListContainer}>
+                  {OBSERVATION_TYPES.map((item) => (
+                    <TouchableOpacity
+                      key={item.type}
+                      style={[
+                        styles.dropdownItemRow,
+                        selectedObsType === item.type && styles.dropdownItemRowSelected,
+                      ]}
+                      onPress={() => {
+                        setSelectedObsType(item.type);
+                        setObsDropdownOpen(false);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name={item.icon as any}
+                        size={16}
+                        color={selectedObsType === item.type ? '#0284C7' : '#64748B'}
+                      />
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          selectedObsType === item.type && styles.dropdownItemTextSelected,
+                        ]}
+                      >
+                        {item.type}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              {/* Description Input */}
+              <Text style={[styles.fieldLabelText, { marginTop: 14 }]}>DESCRIPTION</Text>
+              <TextInput
+                style={styles.notesTextInput}
+                placeholder="[ Fresh elephant footprints ]"
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={3}
+                value={obsDescription}
+                onChangeText={setObsDescription}
+              />
+
+              {/* Location Captured Display */}
+              <Text style={styles.fieldLabelText}>LOCATION</Text>
+              <View style={styles.locationCapturedBox}>
+                <View style={styles.locationCapturedHeader}>
+                  <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                  <Text style={styles.locationCapturedTitle}>✓ Automatically captured</Text>
+                </View>
+                <Text style={styles.locationCapturedCoords}>
+                  📍 Lat: {(location?.latitude ?? actualPath[actualPath.length - 1]?.latitude ?? 6.3672).toFixed(4)}° N, Lng: {(location?.longitude ?? actualPath[actualPath.length - 1]?.longitude ?? 81.503).toFixed(4)}° E
+                </Text>
+                <Text style={styles.locationCapturedSub}>
+                  Associated with Patrol: {patrolId || 'PAT-0156'} ({patrolName})
+                </Text>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity
+                style={[styles.saveWaypointModalBtn, { backgroundColor: '#0284C7' }]}
+                onPress={handleSaveObservation}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+                <Text style={styles.saveWaypointModalBtnText}>Save</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.cancelModalBtn}
+                onPress={() => setObsModalVisible(false)}
                 activeOpacity={0.8}
               >
                 <Text style={styles.cancelModalBtnText}>Cancel</Text>
@@ -816,18 +1049,33 @@ const styles = StyleSheet.create({
     color: Colors.light.muted,
     marginTop: 2,
   },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 8,
+  },
   markWaypointActionBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#059669',
     borderRadius: 8,
-    paddingVertical: 12,
-    gap: 8,
-    marginBottom: 8,
+    paddingVertical: 11,
+    gap: 6,
   },
-  markWaypointActionBtnText: {
-    fontSize: 14,
+  addObservationActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0284C7',
+    borderRadius: 8,
+    paddingVertical: 11,
+    gap: 6,
+  },
+  actionBtnText: {
+    fontSize: 13,
     fontWeight: '800',
     color: '#FFFFFF',
   },
@@ -835,9 +1083,28 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Waypoint List Card
+  // Waypoint & Observation List Card
   waypointListCard: {
     marginBottom: 16,
+  },
+  observationRowCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F0F9FF',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    gap: 10,
+  },
+  obsIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E0F2FE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 2,
   },
   waypointRowCard: {
     flexDirection: 'row',
@@ -1123,6 +1390,83 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     height: 80,
     marginBottom: 16,
+  },
+  dropdownSelectorBtn: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  dropdownSelectorValueText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0284C7',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  dropdownListContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    marginBottom: 14,
+    overflow: 'hidden',
+  },
+  dropdownItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  dropdownItemRowSelected: {
+    backgroundColor: '#E0F2FE',
+  },
+  dropdownItemText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  dropdownItemTextSelected: {
+    fontWeight: '800',
+    color: '#0284C7',
+  },
+  locationCapturedBox: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginBottom: 16,
+  },
+  locationCapturedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  locationCapturedTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#15803D',
+  },
+  locationCapturedCoords: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#166534',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  locationCapturedSub: {
+    fontSize: 11,
+    color: '#15803D',
+    marginTop: 2,
   },
   modalActionRow: {
     flexDirection: 'row',

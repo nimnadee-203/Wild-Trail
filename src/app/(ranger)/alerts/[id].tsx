@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../../constants/colors';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
+import { patrolApiService } from '../../../services/api/patrols';
 
 export default function AlertDetailsScreen() {
   const router = useRouter();
@@ -155,10 +156,12 @@ export default function AlertDetailsScreen() {
             try {
               const docRef = doc(db, 'alerts', alert.id);
               await updateDoc(docRef, { status: 'RESPONDED' });
-              router.push({ pathname: '/alerts/confirm', params: { id: alert.id } });
             } catch (error) {
               console.error(error);
             }
+            // Transition Ranger Status to RESPONDING_TO_ALERT
+            await patrolApiService.setRangerStatus('RESPONDING_TO_ALERT');
+            router.push({ pathname: '/alerts/confirm', params: { id: alert.id } });
           }}
           activeOpacity={0.8}
         >

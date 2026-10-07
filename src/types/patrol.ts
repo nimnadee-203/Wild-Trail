@@ -51,7 +51,7 @@ export interface ScheduledPatrol {
 
 export type ScheduledPatrolInput = Omit<ScheduledPatrol, 'id' | 'createdAt' | 'updatedAt'>;
 
-export type RangerStatus = 'AVAILABLE' | 'ON_PATROL' | 'OFF_DUTY';
+export type RangerStatus = 'AVAILABLE' | 'ON_PATROL' | 'OFF_DUTY' | 'RESPONDING_TO_ALERT';
 
 export interface AssignedPatrol {
   id: string;
@@ -91,6 +91,26 @@ export interface MarkedWaypoint {
   notes?: string;
 }
 
+export type ObservationType =
+  | 'Wildlife Sighting'
+  | 'Illegal Activity'
+  | 'Habitat Condition'
+  | 'Fence Damage'
+  | 'Water Source'
+  | 'Other';
+
+export interface PatrolObservation {
+  id: string;
+  patrolId?: string;
+  patrolName?: string;
+  park?: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+  type: ObservationType;
+  description: string;
+}
+
 export interface ActivePatrolSession {
   sessionId: string;
   patrolId: string;
@@ -105,6 +125,7 @@ export interface ActivePatrolSession {
   pointCount: number;
   actualPath: ActualPathPoint[];
   markedWaypoints: MarkedWaypoint[];
+  observations: PatrolObservation[];
 }
 
 

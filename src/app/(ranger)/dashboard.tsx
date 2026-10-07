@@ -80,12 +80,8 @@ export default function DashboardScreen() {
 
   const fetchPatrols = async () => {
     try {
-      const activeSession = await patrolApiService.getActivePatrolSession();
-      if (activeSession) {
-        setRangerStatus(activeSession.rangerStatus);
-      } else {
-        setRangerStatus('AVAILABLE');
-      }
+      const status = await patrolApiService.getRangerStatus();
+      setRangerStatus(status);
 
       const response = await patrolApiService.getRangerAssignedPatrols('R001');
       if (response.data && response.data.length > 0) {
@@ -180,6 +176,8 @@ export default function DashboardScreen() {
                   styles.rangerStatusPill,
                   rangerStatus === 'ON_PATROL'
                     ? styles.rangerStatusOnPatrol
+                    : rangerStatus === 'RESPONDING_TO_ALERT'
+                    ? styles.rangerStatusResponding
                     : styles.rangerStatusAvailable,
                 ]}
               >
@@ -188,10 +186,12 @@ export default function DashboardScreen() {
                     styles.rangerStatusDot,
                     rangerStatus === 'ON_PATROL'
                       ? styles.rangerDotOnPatrol
+                      : rangerStatus === 'RESPONDING_TO_ALERT'
+                      ? styles.rangerDotResponding
                       : styles.rangerDotAvailable,
                   ]}
                 />
-                <Text style={styles.rangerStatusText}>{rangerStatus}</Text>
+                <Text style={styles.rangerStatusText}>{rangerStatus.replace(/_/g, ' ')}</Text>
               </View>
             </View>
             <Text style={styles.rangerProfileName}>Ranger Nimal</Text>
@@ -705,6 +705,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(245, 158, 11, 0.15)',
     borderColor: '#F59E0B',
   },
+  rangerStatusResponding: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderColor: '#EF4444',
+  },
   rangerStatusDot: {
     width: 6,
     height: 6,
@@ -715,6 +719,9 @@ const styles = StyleSheet.create({
   },
   rangerDotOnPatrol: {
     backgroundColor: '#F59E0B',
+  },
+  rangerDotResponding: {
+    backgroundColor: '#EF4444',
   },
   rangerStatusText: {
     fontSize: 10,
