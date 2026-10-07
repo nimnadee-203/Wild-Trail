@@ -24,6 +24,7 @@ import {
   WaypointType,
   PatrolObservation,
   ObservationType,
+  CompletedPatrolSummary,
 } from '../../types/patrol';
 
 const WAYPOINT_TYPES: { type: WaypointType; label: string; icon: string; color: string }[] = [
@@ -111,6 +112,10 @@ export default function PatrolScreen() {
   const [obsDescription, setObsDescription] = useState('');
   const [obsDropdownOpen, setObsDropdownOpen] = useState(false);
 
+  // Patrol Summary Modal State
+  const [summaryModalVisible, setSummaryModalVisible] = useState(false);
+  const [completedSummary, setCompletedSummary] = useState<CompletedPatrolSummary | null>(null);
+
   // Initialize actualPath with default starting coordinate point
   const [actualPath, setActualPath] = useState<ActualPathPoint[]>([
     {
@@ -179,18 +184,32 @@ export default function PatrolScreen() {
 
   const togglePatrol = async () => {
     if (isPatrolling) {
-      if (patrolId) {
-        await patrolApiService.endPatrolSession(patrolId);
-      }
+      // 1. Stop GPS continuous tracking
       setIsPatrolling(false);
-      Alert.alert(
-        'Patrol Session Ended',
-        `Recorded total ${actualPath.length} GPS breadcrumbs (${calculatePathDistance(actualPath)} km), ${markedWaypoints.length} waypoints, and ${observations.length} observations.\nPatrol status updated to COMPLETED and Ranger status returned to AVAILABLE.`,
-        [
-          { text: 'Return to Dashboard', onPress: () => router.push('/dashboard') },
-          { text: 'Stay Here', style: 'cancel' },
-        ]
+
+      // 2. Record end time
+      const endTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const startTimeStr = typeof params.startTime === 'string' ? params.startTime : actualPath[0]?.timestamp || '08:00 AM';
+      const distanceKm = calculatePathDistance(actualPath);
+
+      // 3. Save actual path, waypoints, observations; set Patrol = COMPLETED & Ranger = AVAILABLE
+      const summary = await patrolApiService.completePatrolSession(
+        patrolId || 'PAT-0156',
+        {
+          patrolName,
+          park,
+          priority,
+          startTime: startTimeStr,
+          endTime: endTimeStr,
+          distanceKm,
+          actualPath,
+          markedWaypoints,
+          observations,
+        }
       );
+
+      setCompletedSummary(summary);
+      setSummaryModalVisible(true);
     } else {
       setIsPatrolling(true);
     }
@@ -795,6 +814,140 @@ export default function PatrolScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={styles.cancelModalBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* End Patrol Summary Modal */}
+      <Modal
+        visible={summaryModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSummaryModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContentCard, { maxHeight: '90%' }]}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.summaryModalHeader}>
+                <View style={styles.summaryCheckIconWrap}>
+                  <Ionicons name="checkmark-circle" size={56} color="#059669" />
+                </View>
+                <Text style={styles.summaryModalTitle}>Patrol Completed</Text>
+                <Text style={styles.summaryModalSubtitle}>
+                  GPS track, waypoints, and observations successfully recorded and saved.
+                </Text>
+              </View>
+
+              {/* Status Indicator Badges */}
+              <View style={styles.summaryStatusBadgeRow}>
+                <View style={styles.summaryCompletedBadge}>
+                  <Ionicons name="shield-checkmark" size={14} color="#059669" />
+                  <Text style={styles.summaryBadgeTextCompleted}>Patrol = COMPLETED</Text>
+                </View>
+
+                <View style={styles.summaryAvailableBadge}>
+                  <Ionicons name="checkmark-circle-outline" size={14} color="#0284C7" />
+                  <Text style={styles.summaryBadgeTextAvailable}>Ranger = AVAILABLE</Text>
+                </View>
+              </View>
+
+              {/* Overview Details Box */}
+              <View style={styles.summaryInfoCard}>
+                <View style={styles.summaryInfoRow}>
+                  <Ionicons name="compass-outline" size={18} color="#4B5563" />
+                  <Text style={styles.summaryInfoLabel}>Patrol ID</Text>
+                  <Text style={styles.summaryInfoVal}>{completedSummary?.patrolId || patrolId || 'PAT-0156'}</Text>
+                </View>
+
+                <View style={styles.summaryInfoRow}>
+                  <Ionicons name="map-outline" size={18} color="#4B5563" />
+                  <Text style={styles.summaryInfoLabel}>Sector / Park</Text>
+                  <Text style={styles.summaryInfoVal}>{completedSummary?.park || park}</Text>
+                </View>
+
+                <View style={styles.summaryInfoRow}>
+                  <Ionicons name="time-outline" size={18} color="#4B5563" />
+                  <Text style={styles.summaryInfoLabel}>Time Window</Text>
+                  <Text style={styles.summaryInfoVal}>
+                    {completedSummary?.startTime} ➔ {completedSummary?.endTime}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Saved Metrics Grid */}
+              <Text style={styles.summarySectionTitle}>SAVED PATROL METRICS</Text>
+              <View style={styles.summaryMetricsGrid}>
+                <View style={styles.summaryMetricBox}>
+                  <Ionicons name="walk" size={20} color="#059669" />
+                  <Text style={styles.summaryMetricVal}>{completedSummary?.distanceKm ?? currentDistanceKm} km</Text>
+                  <Text style={styles.summaryMetricLabel}>Total Distance</Text>
+                </View>
+
+                <View style={styles.summaryMetricBox}>
+                  <Ionicons name="location" size={20} color="#0284C7" />
+                  <Text style={styles.summaryMetricVal}>{completedSummary?.actualPath.length ?? actualPath.length}</Text>
+                  <Text style={styles.summaryMetricLabel}>GPS Points</Text>
+                </View>
+
+                <View style={styles.summaryMetricBox}>
+                  <Ionicons name="bookmark" size={20} color="#D97706" />
+                  <Text style={styles.summaryMetricVal}>{completedSummary?.markedWaypoints.length ?? markedWaypoints.length}</Text>
+                  <Text style={styles.summaryMetricLabel}>Waypoints</Text>
+                </View>
+
+                <View style={styles.summaryMetricBox}>
+                  <Ionicons name="eye" size={20} color="#7C3AED" />
+                  <Text style={styles.summaryMetricVal}>{completedSummary?.observations.length ?? observations.length}</Text>
+                  <Text style={styles.summaryMetricLabel}>Observations</Text>
+                </View>
+              </View>
+
+              {/* Saved Observations Summary */}
+              {(completedSummary?.observations.length ?? observations.length) > 0 && (
+                <View style={styles.summarySectionBlock}>
+                  <Text style={styles.summarySectionTitle}>SAVED OBSERVATIONS</Text>
+                  {(completedSummary?.observations || observations).map((obs) => (
+                    <View key={obs.id} style={styles.summaryObsItem}>
+                      <Ionicons name="paw" size={14} color="#0284C7" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.summaryObsType}>{obs.type} ({obs.timestamp})</Text>
+                        <Text style={styles.summaryObsDesc}>{`"${obs.description}"`}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Saved Waypoints Summary */}
+              {(completedSummary?.markedWaypoints.length ?? markedWaypoints.length) > 0 && (
+                <View style={styles.summarySectionBlock}>
+                  <Text style={styles.summarySectionTitle}>SAVED WAYPOINTS</Text>
+                  {(completedSummary?.markedWaypoints || markedWaypoints).map((wp) => (
+                    <View key={wp.id} style={styles.summaryObsItem}>
+                      <Ionicons name="location" size={14} color="#D97706" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.summaryObsType}>{wp.type.replace(/_/g, ' ')} ({wp.timestamp})</Text>
+                        <Text style={styles.summaryObsDesc}>📍 {wp.latitude}° N, {wp.longitude}° E</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={{ marginTop: 16 }}>
+              <TouchableOpacity
+                style={styles.summaryReturnBtn}
+                onPress={() => {
+                  setSummaryModalVisible(false);
+                  router.push('/dashboard');
+                }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="home" size={18} color="#FFFFFF" />
+                <Text style={styles.summaryReturnBtnText}>Done & Return to Dashboard</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1500,5 +1653,161 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#475569',
+  },
+
+  // End Patrol Summary Modal Styles
+  summaryModalHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  summaryCheckIconWrap: {
+    marginBottom: 8,
+  },
+  summaryModalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  summaryModalSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  summaryStatusBadgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  summaryCompletedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    gap: 6,
+  },
+  summaryBadgeTextCompleted: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#15803D',
+  },
+  summaryAvailableBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E0F2FE',
+    borderWidth: 1,
+    borderColor: '#7DD3FC',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    gap: 6,
+  },
+  summaryBadgeTextAvailable: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0369A1',
+  },
+  summaryInfoCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 8,
+    marginBottom: 16,
+  },
+  summaryInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  summaryInfoLabel: {
+    width: 100,
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  summaryInfoVal: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  summarySectionTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#4B5563',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  summaryMetricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  summaryMetricBox: {
+    width: '48%',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  summaryMetricVal: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+    marginTop: 4,
+  },
+  summaryMetricLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  summarySectionBlock: {
+    marginBottom: 14,
+  },
+  summaryObsItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 8,
+    marginBottom: 6,
+  },
+  summaryObsType: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  summaryObsDesc: {
+    fontSize: 11,
+    color: '#4B5563',
+    marginTop: 2,
+  },
+  summaryReturnBtn: {
+    backgroundColor: Colors.light.primaryDark,
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  summaryReturnBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 });

@@ -128,4 +128,20 @@ export interface ActivePatrolSession {
   observations: PatrolObservation[];
 }
 
+export interface CompletedPatrolSummary {
+  patrolId: string;
+  patrolName: string;
+  park: string;
+  priority: string;
+  startTime: string;
+  endTime: string;
+  distanceKm: number;
+  actualPath: ActualPathPoint[];
+  markedWaypoints: MarkedWaypoint[];
+  observations: PatrolObservation[];
+  patrolStatus: 'COMPLETED';
+  rangerStatus: 'AVAILABLE';
+  completedAt: string;
+}
+
 

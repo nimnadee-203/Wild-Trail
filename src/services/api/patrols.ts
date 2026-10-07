@@ -11,6 +11,7 @@ import {
   ScheduledPatrol,
   MarkedWaypoint,
   PatrolObservation,
+  CompletedPatrolSummary,
 } from '../../types/patrol';
 import { storageService } from '../../storage/asyncStorage';
 import { STORAGE_KEYS } from '../../storage/keys';
@@ -237,6 +238,64 @@ export const patrolApiService = {
 
   async getActivePatrolSession(): Promise<ActivePatrolSession | null> {
     return storageService.getItem<ActivePatrolSession>(STORAGE_KEYS.ACTIVE_PATROL);
+  },
+
+  async completePatrolSession(
+    patrolId: string,
+    summaryInput: {
+      patrolName: string;
+      park: string;
+      priority: string;
+      startTime: string;
+      endTime: string;
+      distanceKm: number;
+      actualPath: ActualPathPoint[];
+      markedWaypoints: MarkedWaypoint[];
+      observations: PatrolObservation[];
+    }
+  ): Promise<CompletedPatrolSummary> {
+    const summary: CompletedPatrolSummary = {
+      patrolId,
+      ...summaryInput,
+      patrolStatus: 'COMPLETED',
+      rangerStatus: 'AVAILABLE',
+      completedAt: new Date().toISOString(),
+    };
+
+    // 1. Update patrol status in mock data: IN_PROGRESS -> COMPLETED
+    inMemoryAssignedPatrols = inMemoryAssignedPatrols.map((item) =>
+      item.id === patrolId ? { ...item, status: 'COMPLETED' as const } : item
+    );
+
+    // 2. Save complete log into Firestore if doc exists
+    try {
+      const patrolRef = doc(db, 'assignedPatrols', patrolId);
+      await updateDoc(patrolRef, {
+        status: 'completed',
+        endTime: summary.endTime,
+        distanceKm: summary.distanceKm,
+        actualPath: summary.actualPath,
+        markedWaypoints: summary.markedWaypoints,
+        observations: summary.observations,
+        updatedAt: summary.completedAt,
+      });
+    } catch {
+      // Ignore fallback if offline or mock
+    }
+
+    // 3. Save completed summary into storage history
+    try {
+      const history = (await storageService.getItem<CompletedPatrolSummary[]>(STORAGE_KEYS.COMPLETED_PATROLS)) || [];
+      await storageService.setItem(STORAGE_KEYS.COMPLETED_PATROLS, [summary, ...history]);
+    } catch {
+      // Ignore fallback
+    }
+
+    // 4. Clear Active Patrol Session & Return Ranger Status to AVAILABLE
+    await storageService.removeItem(STORAGE_KEYS.ACTIVE_PATROL);
+    await storageService.setItem(STORAGE_KEYS.RANGER_STATUS, 'AVAILABLE' as RangerStatus);
+
+    return summary;
   },
 
   async endPatrolSession(patrolId: string): Promise<RangerStatus> {

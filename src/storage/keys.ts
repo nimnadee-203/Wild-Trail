@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   PENDING_CONFLICTS: '@wildlife_pending_conflicts',
   ACTIVE_PATROL: '@wildlife_active_patrol',
   RANGER_STATUS: '@wildlife_ranger_status',
+  COMPLETED_PATROLS: '@wildlife_completed_patrols',
   OFFLINE_CACHE: '@wildlife_offline_cache',
 } as const;
 
