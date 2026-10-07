@@ -1,5 +1,16 @@
+import { collection, doc, getDocs, query, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { apiFetch, ApiResponse } from './client';
-import { PatrolLog, GPSCoordinate, AssignedPatrol, ActivePatrolSession, RangerStatus, ActualPathPoint } from '../../types/patrol';
+import {
+  PatrolLog,
+  GPSCoordinate,
+  AssignedPatrol,
+  ActivePatrolSession,
+  RangerStatus,
+  ActualPathPoint,
+  ScheduledPatrol,
+  MarkedWaypoint,
+} from '../../types/patrol';
 import { storageService } from '../../storage/asyncStorage';
 import { STORAGE_KEYS } from '../../storage/keys';
 
@@ -56,15 +67,58 @@ export const MOCK_ASSIGNED_PATROLS: AssignedPatrol[] = [
 
 let inMemoryAssignedPatrols = [...MOCK_ASSIGNED_PATROLS];
 
+export function mapScheduledToAssignedPatrol(sp: ScheduledPatrol): AssignedPatrol {
+  let mappedStatus: AssignedPatrol['status'] = 'ASSIGNED';
+  if (sp.status === 'on patrol') mappedStatus = 'IN_PROGRESS';
+  else if (sp.status === 'completed') mappedStatus = 'COMPLETED';
+  else if (sp.status === 'cancelled') mappedStatus = 'CANCELLED';
+
+  const routeTuples: [number, number][] = (sp.route || []).map((pt) => [pt.longitude, pt.latitude]);
+
+  return {
+    id: sp.id,
+    name: sp.teamName || 'Patrol Assignment',
+    park: sp.zone || 'Yala National Park',
+    date: sp.date || new Date().toISOString().split('T')[0],
+    startTime: sp.startTime || '08:00',
+    duration: 4,
+    priority: 'HIGH',
+    status: mappedStatus,
+    instructions: sp.notes || 'Proceed along assigned sector checkpoints and verify boundary integrity.',
+    route: routeTuples.length > 0 ? routeTuples : [[81.503, 6.3672], [81.5044, 6.3681], [81.5057, 6.3695]],
+  };
+}
+
 export const patrolApiService = {
   async getRangerAssignedPatrols(rangerId: string = 'R001'): Promise<ApiResponse<AssignedPatrol[]>> {
     try {
-      const response = await apiFetch<AssignedPatrol[]>(`/rangers/${rangerId}/patrols`);
-      if (response.data && response.data.length > 0) {
-        return response;
+      const q = query(collection(db, 'assignedPatrols'));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const firestorePatrols = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          const sp: ScheduledPatrol = {
+            id: docSnap.id,
+            teamName: data.teamName || '',
+            rangerName: data.rangerName || '',
+            rangerId: data.rangerId || undefined,
+            zone: data.zone || '',
+            date: data.date || '',
+            startTime: data.startTime || '',
+            endTime: data.endTime || undefined,
+            notes: data.notes || undefined,
+            status: data.status || 'scheduled',
+            route: data.route || [],
+            checkpoints: data.checkpoints || [],
+          };
+          return mapScheduledToAssignedPatrol(sp);
+        });
+        if (firestorePatrols.length > 0) {
+          return { data: firestorePatrols, error: null, status: 200 };
+        }
       }
     } catch {
-      // Fall back to mock data
+      // Fall back to in-memory mock data
     }
     return {
       data: inMemoryAssignedPatrols,
@@ -81,6 +135,13 @@ export const patrolApiService = {
     inMemoryAssignedPatrols = inMemoryAssignedPatrols.map((item) =>
       item.id === patrol.id ? { ...item, status: 'IN_PROGRESS' as const } : item
     );
+
+    try {
+      const patrolRef = doc(db, 'assignedPatrols', patrol.id);
+      await updateDoc(patrolRef, { status: 'on patrol' });
+    } catch {
+      // Ignore fallback if offline or mock
+    }
 
     const initialPoint: ActualPathPoint = {
       latitude: patrol.route[0] ? patrol.route[0][1] : 6.3672,
@@ -102,6 +163,7 @@ export const patrolApiService = {
       routeCoords: patrol.route,
       pointCount: 1,
       actualPath: [initialPoint],
+      markedWaypoints: [],
     };
 
     await storageService.setItem(STORAGE_KEYS.ACTIVE_PATROL, session);
@@ -123,6 +185,20 @@ export const patrolApiService = {
     return updatedSession;
   },
 
+  async addMarkedWaypoint(waypoint: MarkedWaypoint): Promise<ActivePatrolSession | null> {
+    const session = await storageService.getItem<ActivePatrolSession>(STORAGE_KEYS.ACTIVE_PATROL);
+    if (!session) return null;
+
+    const updatedWaypoints = [...(session.markedWaypoints || []), waypoint];
+    const updatedSession: ActivePatrolSession = {
+      ...session,
+      markedWaypoints: updatedWaypoints,
+    };
+
+    await storageService.setItem(STORAGE_KEYS.ACTIVE_PATROL, updatedSession);
+    return updatedSession;
+  },
+
   async getActivePatrolSession(): Promise<ActivePatrolSession | null> {
     return storageService.getItem<ActivePatrolSession>(STORAGE_KEYS.ACTIVE_PATROL);
   },
@@ -132,6 +208,13 @@ export const patrolApiService = {
     inMemoryAssignedPatrols = inMemoryAssignedPatrols.map((item) =>
       item.id === patrolId ? { ...item, status: 'COMPLETED' as const } : item
     );
+
+    try {
+      const patrolRef = doc(db, 'assignedPatrols', patrolId);
+      await updateDoc(patrolRef, { status: 'completed' });
+    } catch {
+      // Ignore fallback if offline or mock
+    }
 
     // 2. Clear Active Patrol Session & Return Ranger Status to AVAILABLE
     await storageService.removeItem(STORAGE_KEYS.ACTIVE_PATROL);

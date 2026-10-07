@@ -58,7 +58,7 @@ export function PatrolRouteMap({
         source={{ html }}
         style={styles.map}
         onLoadEnd={syncMap}
-        onMessage={(event) => {
+        onMessage={(event: any) => {
           try {
             const payload = JSON.parse(event.nativeEvent.data) as {
               type?: string;

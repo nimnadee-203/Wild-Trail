@@ -118,10 +118,12 @@ export function PatrolRouteMap({
   const onChangeRef = useRef(onChange);
   const routeRef = useRef(route);
   const checkpointsRef = useRef(checkpoints);
-  modeRef.current = mode;
-  onChangeRef.current = onChange;
-  routeRef.current = route;
-  checkpointsRef.current = checkpoints;
+  useEffect(() => {
+    modeRef.current = mode;
+    onChangeRef.current = onChange;
+    routeRef.current = route;
+    checkpointsRef.current = checkpoints;
+  }, [mode, onChange, route, checkpoints]);
 
   useEffect(() => {
     ensureMapboxCss();

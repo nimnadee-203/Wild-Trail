@@ -72,6 +72,25 @@ export interface ActualPathPoint {
   timestamp: string; // e.g. "08:02"
 }
 
+export type WaypointType =
+  | 'OBSERVATION'
+  | 'SIGHTING'
+  | 'WATER_POINT'
+  | 'PERIMETER_CHECK'
+  | 'POACHING_TRAIL'
+  | 'FENCE_BREACH'
+  | 'GENERAL';
+
+export interface MarkedWaypoint {
+  id: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string; // e.g. "08:05 PM"
+  timestampMs: number;
+  type: WaypointType;
+  notes?: string;
+}
+
 export interface ActivePatrolSession {
   sessionId: string;
   patrolId: string;
@@ -85,6 +104,7 @@ export interface ActivePatrolSession {
   routeCoords: [number, number][];
   pointCount: number;
   actualPath: ActualPathPoint[];
+  markedWaypoints: MarkedWaypoint[];
 }
 
 
