@@ -90,156 +90,87 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar backgroundColor={Colors.light.primaryDark} barStyle="light-content" />
+      <StatusBar backgroundColor="#0F1D17" barStyle="light-content" />
 
-      {/* Top Application Header / Navigation Bar */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.pawIconWrap}>
-            <Ionicons name="paw" size={22} color="#FFFFFF" />
+      {/* Top Application Header (Dark WildGuard Header) */}
+      <View style={styles.darkHeader}>
+        <View style={styles.darkHeaderLeft}>
+          <View style={styles.shieldIconWrap}>
+            <Ionicons name="shield-checkmark" size={20} color="#4ADE80" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>Wildlife Monitoring</Text>
-            <View style={styles.headerStatusRow}>
-              <View style={styles.statusDot} />
-              <Text style={styles.headerSubtitle}>Field Ranger Portal • Sector 4</Text>
-            </View>
+            <Text style={styles.darkHeaderTitle}>WILDGUARD</Text>
+            <Text style={styles.darkHeaderSubtitle}>Yala NP Anti-Poaching System</Text>
           </View>
         </View>
 
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.headerBtn}
-            onPress={() => router.push('/alerts')}
-            activeOpacity={0.8}
-            accessibilityLabel="Alert notifications"
-          >
-            <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
-            <View style={styles.bellBadge} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.profileAvatarBtn}
-            onPress={() => router.push('/profile')}
-            activeOpacity={0.8}
-            accessibilityLabel="Ranger Profile"
-          >
-            <Ionicons name="person" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.syncedPillBtn} activeOpacity={0.8}>
+          <Ionicons name="sync-outline" size={15} color="#A7F3D0" />
+          <Text style={styles.syncedPillText}>Synced</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* Live System Metrics Overview */}
-        <View style={styles.metricsGrid}>
-          <View style={[styles.metricCard, styles.metricCardPrimary]}>
-            <View style={styles.metricHeader}>
-              <Ionicons name="hardware-chip-outline" size={18} color={Colors.light.primaryDark} />
-              <Text style={styles.metricLabel}>Tracked</Text>
-            </View>
-            <Text style={styles.metricValue}>14</Text>
-            <Text style={styles.metricSub}>Active Collars</Text>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.metricCard, styles.metricCardDanger]}
-            onPress={() => router.push('/alerts')}
-            activeOpacity={0.85}
-          >
-            <View style={styles.metricHeader}>
-              <Ionicons name="warning-outline" size={18} color={Colors.light.danger} />
-              <Text style={[styles.metricLabel, { color: Colors.light.danger }]}>High Risk</Text>
-            </View>
-            <Text style={[styles.metricValue, { color: Colors.light.danger }]}>2</Text>
-            <Text style={styles.metricSub}>Immediate Action</Text>
-          </TouchableOpacity>
-
-          <View style={styles.metricCard}>
-            <View style={styles.metricHeader}>
-              <Ionicons name="shield-checkmark-outline" size={18} color="#059669" />
-              <Text style={styles.metricLabel}>Patrol</Text>
-            </View>
-            <Text style={[styles.metricValue, { color: '#059669' }]}>Active</Text>
-            <Text style={styles.metricSub}>GPS Track On</Text>
-          </View>
-
-          <View style={styles.metricCard}>
-            <View style={styles.metricHeader}>
-              <Ionicons name="radio-outline" size={18} color="#0284C7" />
-              <Text style={styles.metricLabel}>Signal</Text>
-            </View>
-            <Text style={[styles.metricValue, { color: '#0284C7' }]}>98%</Text>
-            <Text style={styles.metricSub}>LoRa / VHF Grid</Text>
+        {/* On-Duty Ranger Profile Card */}
+        <View style={styles.rangerProfileCard}>
+          <Image
+            source={{
+              uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=250&q=80',
+            }}
+            style={styles.rangerAvatar}
+          />
+          <View style={styles.rangerProfileInfo}>
+            <Text style={styles.rangerProfileLabel}>ON-DUTY RANGER</Text>
+            <Text style={styles.rangerProfileName}>Ranger Nimal</Text>
           </View>
         </View>
 
-        {/* High-Risk Wildlife Alert Hero Banner */}
-        <View style={styles.alertBanner}>
-          <View style={styles.alertBannerTop}>
-            <View style={styles.alertIconWrap}>
-              <Ionicons name="warning" size={26} color={Colors.light.danger} />
+        {/* Assigned Patrol Details Card */}
+        <View style={styles.assignedPatrolCard}>
+          <View style={styles.assignedPatrolHeader}>
+            <View style={styles.assignedPatrolBadge}>
+              <Text style={styles.assignedPatrolBadgeText}>ASSIGNED PATROL</Text>
             </View>
-            <View style={styles.alertBannerText}>
-              <View style={styles.urgentBadgeRow}>
-                <Text style={styles.alertBannerTitle}>CRITICAL RISK ALERT</Text>
-                <View style={styles.pulsingBadge}>
-                  <Text style={styles.pulsingBadgeText}>LIVE BREACH</Text>
-                </View>
-              </View>
-              <Text style={styles.alertBannerSubtitle}>
-                Elephant E-014 crossed buffer geofence towards agricultural land.
-              </Text>
+            <View style={styles.locationPinWrap}>
+              <Ionicons name="location-outline" size={20} color="#A7F3D0" />
             </View>
           </View>
 
-          {/* Animal Card */}
-          <View style={styles.animalCard}>
-            <Image source={{ uri: ELEPHANT_E014_IMG }} style={styles.animalImage} />
-            <View style={styles.animalInfo}>
-              <View style={styles.animalTitleRow}>
-                <Text style={styles.animalName}>Elephant E-014</Text>
-                <View style={styles.riskBadge}>
-                  <Text style={styles.riskBadgeText}>HIGH RISK</Text>
-                </View>
-              </View>
-              <Text style={styles.animalSpecies}>Asian Elephant • Adult Bull (~28 yrs)</Text>
-              <View style={styles.locationRow}>
-                <Ionicons name="location-sharp" size={15} color={Colors.light.danger} />
-                <Text style={styles.locationText}>Farmland Zone B (350m to houses)</Text>
-              </View>
-              <View style={styles.speedRow}>
-                <Ionicons name="speedometer-outline" size={14} color="#6B7280" />
-                <Text style={styles.speedText}>Speed: 4.2 km/h • Heading South-West</Text>
-              </View>
+          <View style={styles.patrolFieldGroup}>
+            <Text style={styles.patrolFieldLabel}>NATIONAL PARK</Text>
+            <Text style={styles.patrolFieldValueMain}>Yala National Park</Text>
+          </View>
+
+          <View style={styles.patrolFieldGroup}>
+            <Text style={styles.patrolFieldLabel}>ACTIVE SECTOR ROUTE</Text>
+            <Text style={styles.patrolFieldValueSub}>Block 1 – Wildlife Trail</Text>
+          </View>
+
+          <View style={styles.patrolFieldGroup}>
+            <Text style={styles.patrolFieldLabel}>SCHEDULE WINDOW</Text>
+            <View style={styles.scheduleRow}>
+              <Ionicons name="time-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.scheduleText}>08:00 AM - 12:00 PM</Text>
             </View>
           </View>
+        </View>
 
-          {/* Time detected */}
-          <View style={styles.detectedRow}>
-            <Ionicons name="time-outline" size={15} color="#6B7280" />
-            <Text style={styles.detectedText}>Detected: Today, 07:43 PM (Auto Geofence Alert)</Text>
+        {/* System Status Grid (GPS & Offline Sync) */}
+        <View style={styles.statusGridRow}>
+          <View style={styles.statusCard}>
+            <View style={styles.statusCardHeader}>
+              <View style={styles.greenStatusDot} />
+              <Text style={styles.statusCardLabel}>GPS STATUS</Text>
+            </View>
+            <Text style={styles.statusCardValue}>GPS Ready</Text>
           </View>
 
-          {/* Action Buttons for Critical Alert */}
-          <View style={styles.alertActionButtons}>
-            <TouchableOpacity
-              style={styles.viewAlertBtn}
-              onPress={() => router.push('/alerts')}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.viewAlertBtnText}>Respond & View Details</Text>
-              <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.viewMapBtn}
-              onPress={() => router.push('/map')}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="map-outline" size={18} color={Colors.light.primaryDark} />
-              <Text style={styles.viewMapBtnText}>Map</Text>
-            </TouchableOpacity>
+          <View style={styles.statusCard}>
+            <View style={styles.statusCardHeader}>
+              <View style={styles.greenStatusDot} />
+              <Text style={styles.statusCardLabel}>OFFLINE SYNC</Text>
+            </View>
+            <Text style={styles.statusCardValue}>Network OK</Text>
           </View>
         </View>
 
@@ -385,12 +316,12 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#0C1812',
   },
 
-  // Header App Bar
-  header: {
-    backgroundColor: Colors.light.primaryDark,
+  // Dark WildGuard Header Bar
+  darkHeader: {
+    backgroundColor: '#0F1D17',
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'android' ? 12 : 10,
     paddingBottom: 14,
@@ -398,76 +329,50 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.08)',
+    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
-  headerLeft: {
+  darkHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  pawIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+  shieldIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#1C3529',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#294B3B',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+  darkHeaderTitle: {
+    fontSize: 19,
+    fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: 0.2,
+    letterSpacing: 0.5,
   },
-  headerStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#34D399',
-    marginRight: 6,
-  },
-  headerSubtitle: {
+  darkHeaderSubtitle: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.85)',
+    color: '#8EA69A',
     fontWeight: '500',
+    marginTop: 1,
   },
-  headerRight: {
+  syncedPillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    backgroundColor: '#1C3529',
+    borderWidth: 1,
+    borderColor: '#294B3B',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 5,
   },
-  headerBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  bellBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: '#EF4444',
-    borderWidth: 1.5,
-    borderColor: Colors.light.primaryDark,
-  },
-  profileAvatarBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  syncedPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#A7F3D0',
   },
 
   // Scroll Container
@@ -476,71 +381,148 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
   },
 
-  // Live Metrics Grid
-  metricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 16,
-  },
-  metricCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  metricCardPrimary: {
-    borderColor: '#BBF7D0',
-    backgroundColor: '#F0FDF4',
-  },
-  metricCardDanger: {
-    borderColor: '#FECACA',
-    backgroundColor: '#FEF2F2',
-  },
-  metricHeader: {
+  // Ranger Profile Card
+  rangerProfileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
+    backgroundColor: '#16271F',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#223B2E',
+    padding: 14,
+    marginBottom: 12,
   },
-  metricLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#4B5563',
-    textTransform: 'uppercase',
+  rangerAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: '#4ADE80',
+    marginRight: 14,
   },
-  metricValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#111827',
+  rangerProfileInfo: {
+    justifyContent: 'center',
   },
-  metricSub: {
+  rangerProfileLabel: {
     fontSize: 11,
-    color: '#6B7280',
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: '#8EA69A',
+  },
+  rangerProfileName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
     marginTop: 2,
   },
 
-  // Alert Banner
-  alertBanner: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#F87171',
-    padding: 16,
+  // Assigned Patrol Card
+  assignedPatrolCard: {
+    backgroundColor: '#16271F',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#244234',
+    padding: 18,
+    marginBottom: 12,
+  },
+  assignedPatrolHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  assignedPatrolBadge: {
+    backgroundColor: '#20392C',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#2B4D3C',
+  },
+  assignedPatrolBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    color: '#A7F3D0',
+  },
+  locationPinWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#20392C',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  patrolFieldGroup: {
+    marginTop: 10,
+  },
+  patrolFieldLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: '#8EA69A',
+  },
+  patrolFieldValueMain: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: 3,
+  },
+  patrolFieldValueSub: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 3,
+  },
+  scheduleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 6,
+  },
+  scheduleText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+
+  // System Status Grid
+  statusGridRow: {
+    flexDirection: 'row',
+    gap: 10,
     marginBottom: 20,
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+  },
+  statusCard: {
+    flex: 1,
+    backgroundColor: '#16271F',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#223B2E',
+    padding: 14,
+  },
+  statusCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  greenStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4ADE80',
+  },
+  statusCardLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: '#8EA69A',
+  },
+  statusCardValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: 6,
   },
   alertBannerTop: {
     flexDirection: 'row',
@@ -761,16 +743,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#111827',
+    color: '#FFFFFF',
   },
   sectionSubtitle: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#8EA69A',
     fontWeight: '500',
   },
   seeAllText: {
     fontSize: 13,
-    color: Colors.light.primary,
+    color: '#4ADE80',
     fontWeight: '700',
   },
 
