@@ -3,8 +3,11 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
+import { useRoleGuard } from '../../hooks/useRoleGuard';
 
 export default function RangerLayout() {
+  useRoleGuard(['ranger', 'admin']);
+
   return (
     <Tabs
       screenOptions={{

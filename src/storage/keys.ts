@@ -9,6 +9,8 @@ export const STORAGE_KEYS = {
   OFFLINE_CACHE: '@wildlife_offline_cache',
   OFFLINE_QUEUE: '@wildlife_offline_queue',
   NETWORK_STATUS: '@wildlife_network_status',
+  STAFF_USERS: '@wildlife_staff_users',
+  MOCK_RANGERS: '@wildlife_mock_rangers',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS];

@@ -6,14 +6,24 @@ export const USER_ROLES: Record<UserRole, { key: UserRole; title: string; descri
     title: 'Wildlife Ranger',
     description: 'Patrol tracking, poaching alerts, and incident response.',
   },
-  community: {
-    key: 'community',
-    title: 'Community Reporter',
-    description: 'Human-wildlife conflict reporting and local safety updates.',
+  manager: {
+    key: 'manager',
+    title: 'Park Manager',
+    description: 'Patrol scheduling, team assignments, and sector management.',
+  },
+  liaison: {
+    key: 'liaison',
+    title: 'Community Liaison',
+    description: 'Human-wildlife conflict mitigation and community safety alerts.',
   },
   admin: {
     key: 'admin',
     title: 'System Administrator',
-    description: 'System management and analytics overview.',
+    description: 'Staff account management, access control, and user provisioning.',
+  },
+  community: {
+    key: 'community',
+    title: 'Community Resident',
+    description: 'Conflict reporting and local safety warnings.',
   },
 };

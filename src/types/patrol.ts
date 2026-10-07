@@ -51,7 +51,13 @@ export interface ScheduledPatrol {
 
 export type ScheduledPatrolInput = Omit<ScheduledPatrol, 'id' | 'createdAt' | 'updatedAt'>;
 
-export type RangerStatus = 'AVAILABLE' | 'ON_PATROL' | 'OFF_DUTY' | 'RESPONDING_TO_ALERT';
+export type RangerStatus =
+  | 'AVAILABLE'
+  | 'ON_PATROL'
+  | 'RESPONDING_TO_ALERT'
+  | 'OFF_DUTY'
+  | 'ON_LEAVE'
+  | 'UNAVAILABLE';
 
 export interface AssignedPatrol {
   id: string;

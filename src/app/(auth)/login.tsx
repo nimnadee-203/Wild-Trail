@@ -1,51 +1,73 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button, Input, Card } from '../../components/ui';
-import { USER_ROLES } from '../../constants/roles';
-import { UserRole } from '../../types/user';
 import Colors from '../../constants/colors';
+import { userService } from '../../services/api/users';
+import { UserRole } from '../../types/user';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [selectedRole, setSelectedRole] = useState<UserRole>('ranger');
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Auth logic stub to be implemented in future phase
-    if (selectedRole === 'ranger') {
-      router.replace('/(ranger)/dashboard');
+  const routeByUserRole = (role: UserRole) => {
+    switch (role) {
+      case 'admin':
+        router.replace('/(admin)/users' as any);
+        break;
+      case 'manager':
+        router.replace('/(manager)/overview' as any);
+        break;
+      case 'liaison':
+        router.replace('/(liaison)/dashboard' as any);
+        break;
+      case 'ranger':
+      default:
+        router.replace('/(ranger)/dashboard' as any);
+        break;
+    }
+  };
+
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      const msg = 'Please enter your email and password.';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Missing Fields', msg);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const staffUser = await userService.loginWithEmailPassword(email, password);
+      setIsLoading(false);
+      routeByUserRole(staffUser.role);
+    } catch (err: any) {
+      setIsLoading(false);
+      const errMsg = err?.message || 'Login failed. Please check credentials.';
+      if (Platform.OS === 'web') {
+        window.alert(errMsg);
+      } else {
+        Alert.alert('Login Error', errMsg);
+      }
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.heading}>Wildlife Protection Portal</Text>
-        <Text style={styles.subheading}>Select your role to sign in</Text>
+        <Text style={styles.heading}>Wildlife Protection System</Text>
+        <Text style={styles.subheading}>Staff & Operations Portal Login</Text>
 
         <Card style={styles.card}>
-          <View style={styles.roleContainer}>
-            <Button
-              title={USER_ROLES.ranger.title}
-              variant={selectedRole === 'ranger' ? 'primary' : 'outline'}
-              onPress={() => setSelectedRole('ranger')}
-              style={styles.roleButton}
-            />
-            <Button
-              title={USER_ROLES.community.title}
-              variant={selectedRole === 'community' ? 'secondary' : 'outline'}
-              onPress={() => setSelectedRole('community')}
-              style={styles.roleButton}
-            />
-          </View>
-
           <Input
-            label={selectedRole === 'ranger' ? 'Ranger Badge Number' : 'Village Phone / Reporter ID'}
-            placeholder={selectedRole === 'ranger' ? 'e.g. RANGER-409' : 'e.g. +254 700 000 000'}
-            value={identifier}
-            onChangeText={setIdentifier}
+            label="Email"
+            placeholder="e.g. admin@wildguard.org or nimal@wildguard.org"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
 
           <Input
@@ -57,10 +79,28 @@ export default function LoginScreen() {
           />
 
           <Button
-            title={`Sign In as ${selectedRole === 'ranger' ? 'Ranger' : 'Community Reporter'}`}
+            title="Login"
             onPress={handleLogin}
+            isLoading={isLoading}
             style={styles.loginBtn}
           />
+
+          {/* Quick Demo Credentials Assistant */}
+          <View style={styles.demoBox}>
+            <Text style={styles.demoTitle}>DEMO QUICK LOGIN TEST ACCOUNTS:</Text>
+            <Text style={styles.demoText} onPress={() => { setEmail('admin@wildguard.org'); setPassword('WildGuard2026!'); }}>
+              🔑 Admin: admin@wildguard.org
+            </Text>
+            <Text style={styles.demoText} onPress={() => { setEmail('nimal@wildguard.org'); setPassword('WildGuard2026!'); }}>
+              🔑 Ranger: nimal@wildguard.org
+            </Text>
+            <Text style={styles.demoText} onPress={() => { setEmail('manager@wildguard.org'); setPassword('WildGuard2026!'); }}>
+              🔑 Manager: manager@wildguard.org
+            </Text>
+            <Text style={styles.demoText} onPress={() => { setEmail('liaison@wildguard.org'); setPassword('WildGuard2026!'); }}>
+              🔑 Liaison: liaison@wildguard.org
+            </Text>
+          </View>
         </Card>
       </View>
     </SafeAreaView>
@@ -93,17 +133,27 @@ const styles = StyleSheet.create({
   card: {
     padding: 20,
   },
-  roleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    gap: 8,
-  },
-  roleButton: {
-    flex: 1,
-    marginVertical: 0,
-  },
   loginBtn: {
     marginTop: 16,
+  },
+  demoBox: {
+    marginTop: 20,
+    padding: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 4,
+  },
+  demoTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748B',
+    marginBottom: 2,
+  },
+  demoText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.light.primaryDark,
   },
 });
