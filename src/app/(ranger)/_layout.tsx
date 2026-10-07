@@ -41,6 +41,15 @@ export default function RangerLayout() {
         }}
       />
       <Tabs.Screen
+        name="patrol"
+        options={{
+          title: 'Patrol',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'compass' : 'compass-outline'} size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="alerts"
         options={{
           title: 'Alerts',
@@ -57,15 +66,6 @@ export default function RangerLayout() {
         }}
       />
       <Tabs.Screen
-        name="map"
-        options={{
-          title: 'Map',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'map' : 'map-outline'} size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
@@ -75,12 +75,12 @@ export default function RangerLayout() {
         }}
       />
 
-      {/* Sub-screens accessed via Home actions, hidden from bottom tab icons */}
+      {/* Sub-screens accessed via actions, hidden from bottom tab icons */}
       <Tabs.Screen
-        name="patrol"
+        name="map"
         options={{
           href: null,
-          title: 'GPS Patrol Tracking',
+          title: 'Map',
         }}
       />
       <Tabs.Screen
