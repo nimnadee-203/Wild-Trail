@@ -1,19 +1,20 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ManagerShell, managerStyles } from '../../components/manager/ManagerShell';
 import { FilterButton, StatusPill } from '../../components/manager/ManagerUI';
-import { mockRangers } from '../../components/manager/data';
 import { PatrolRouteMap } from '../../components/manager/PatrolRouteMap';
 import { PatrolMapMode } from '../../components/manager/patrolMapHtml';
+import { userService } from '../../services/api/users';
 import {
-  createScheduledPatrol,
-  deleteScheduledPatrol,
-  getScheduledPatrolErrorMessage,
-  subscribeToScheduledPatrols,
-  updateScheduledPatrol,
+    createScheduledPatrol,
+    deleteScheduledPatrol,
+    getScheduledPatrolErrorMessage,
+    subscribeToScheduledPatrols,
+    updateScheduledPatrol,
 } from '../../services/scheduledPatrols';
 import { ScheduledPatrol, ScheduledPatrolInput } from '../../types/patrol';
+import { RangerProfileDoc } from '../../types/user';
 
 type PatrolForm = Omit<ScheduledPatrolInput, 'status'>;
 type PatrolCard = {
@@ -85,6 +86,9 @@ function DatePicker({
 export default function Patrols() {
   const [filter, setFilter] = useState<(typeof statuses)[number]>('All teams');
   const [scheduledPatrols, setScheduledPatrols] = useState<ScheduledPatrol[]>([]);
+  const [rangers, setRangers] = useState<RangerProfileDoc[]>([]);
+  const [rangersLoading, setRangersLoading] = useState(true);
+  const [rangersError, setRangersError] = useState('');
   const [databaseLoaded, setDatabaseLoaded] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingPatrol, setEditingPatrol] = useState<ScheduledPatrol | null>(null);
@@ -95,6 +99,7 @@ export default function Patrols() {
   const [timePicker, setTimePicker] = useState<'startTime' | 'endTime' | null>(null);
   const [draftTime, setDraftTime] = useState('08:00');
   const [mapMode, setMapMode] = useState<PatrolMapMode>('route');
+  const [mapInstanceKey, setMapInstanceKey] = useState(0);
 
   useEffect(() => {
     return subscribeToScheduledPatrols(
@@ -104,6 +109,24 @@ export default function Patrols() {
       },
       (error) => Alert.alert('Unable to load patrols', error.message)
     );
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    userService.getRangers()
+      .then((loadedRangers) => {
+        if (active) setRangers(loadedRangers);
+      })
+      .catch((error: unknown) => {
+        if (active) setRangersError(error instanceof Error ? error.message : 'Unable to load rangers.');
+      })
+      .finally(() => {
+        if (active) setRangersLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const cards: PatrolCard[] = useMemo(() => {
@@ -135,21 +158,25 @@ export default function Patrols() {
     ? cards
     : cards.filter((team) => team.status.toLowerCase() === filter.toLowerCase());
 
-  const rangerOptions = useMemo(() => mockRangers.map((ranger) => {
+  const rangerOptions = useMemo(() => rangers.map((ranger) => {
     const assigned = scheduledPatrols.find((patrol) =>
-      patrol.id !== editingPatrol?.id
+      form.date
+      && patrol.date === form.date
+      && patrol.id !== editingPatrol?.id
       && patrol.status !== 'completed'
       && patrol.status !== 'cancelled'
       && (patrol.rangerId === ranger.id || patrol.rangerName === ranger.name)
     );
-    const status = ranger.status === 'off duty' ? 'off duty' : assigned ? 'on patrol' : ranger.status;
-    return { ...ranger, status, available: status === 'available' };
-  }), [editingPatrol?.id, scheduledPatrols]);
+    const profileStatus = ranger.status.toLowerCase().replace('_', ' ');
+    const status = assigned ? 'assigned' : profileStatus;
+    return { ...ranger, zone: ranger.zoneId, status, available: !assigned && status === 'available' };
+  }), [editingPatrol?.id, form.date, rangers, scheduledPatrols]);
 
   const openCreate = () => {
     setEditingPatrol(null);
     setForm(emptyForm);
     setMapMode('route');
+    setMapInstanceKey((key) => key + 1);
     setSaveError('');
     setModalVisible(true);
   };
@@ -169,6 +196,7 @@ export default function Patrols() {
       checkpoints: patrol.checkpoints ?? [],
     });
     setMapMode('route');
+    setMapInstanceKey((key) => key + 1);
     setSaveError('');
     setModalVisible(true);
   };
@@ -225,31 +253,31 @@ export default function Patrols() {
 
   const deletePatrol = () => {
     if (!editingPatrol) return;
-    Alert.alert(
-      'Delete patrol?',
-      `This will permanently delete ${editingPatrol.teamName}.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete Patrol',
-          style: 'destructive',
-          onPress: async () => {
-            setSaving(true);
-            setSaveError('');
-            try {
-              await deleteScheduledPatrol(editingPatrol.id);
-              setModalVisible(false);
-            } catch (error) {
-              const message = getScheduledPatrolErrorMessage(error);
-              setSaveError(message);
-              Alert.alert('Unable to delete patrol', message);
-            } finally {
-              setSaving(false);
-            }
-          },
-        },
-      ]
-    );
+    const removePatrol = async () => {
+      setSaving(true);
+      setSaveError('');
+      try {
+        await deleteScheduledPatrol(editingPatrol.id);
+        setModalVisible(false);
+      } catch (error) {
+        const message = getScheduledPatrolErrorMessage(error);
+        setSaveError(message);
+        if (Platform.OS === 'web') window.alert(`Unable to delete patrol: ${message}`);
+        else Alert.alert('Unable to delete patrol', message);
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Delete ${editingPatrol.teamName}? This cannot be undone.`)) removePatrol();
+      return;
+    }
+
+    Alert.alert('Delete patrol?', `This will permanently delete ${editingPatrol.teamName}.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete Patrol', style: 'destructive', onPress: removePatrol },
+    ]);
   };
 
   const openTimePicker = (field: 'startTime' | 'endTime') => {
@@ -301,16 +329,20 @@ export default function Patrols() {
           <View style={styles.modalHeader}><View><Text style={styles.modalTitle}>{editingPatrol ? 'Edit patrol assignment' : 'Schedule a patrol'}</Text><Text style={styles.modalSubtitle}>Assign a ranger and set the patrol details.</Text></View><Pressable onPress={() => setModalVisible(false)}><Ionicons name="close" size={24} color="#71817A" /></Pressable></View>
           <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
             {saveError ? <View style={styles.errorBanner}><Ionicons name="warning-outline" size={18} color="#B34D3E" /><Text style={styles.errorText}>{saveError}</Text></View> : null}
+            <View style={styles.field}><Text style={styles.label}>Patrol date</Text><Pressable style={styles.pickerButton} onPress={() => setDatePickerVisible((visible) => !visible)}><Ionicons name="calendar-outline" size={19} color="#2B8263" /><Text style={[styles.pickerValue, !form.date && styles.placeholder]}>{form.date || 'Choose a date'}</Text><Ionicons name={datePickerVisible ? 'chevron-up' : 'chevron-down'} size={17} color="#71817A" /></Pressable>{datePickerVisible && <DatePicker value={form.date} onChange={(date) => setForm((current) => ({ ...current, date }))} onClose={() => setDatePickerVisible(false)} />}</View>
             <View style={styles.field}><Text style={styles.label}>Team name</Text><TextInput style={styles.input} value={form.teamName} onChangeText={(value) => setForm((current) => ({ ...current, teamName: value }))} placeholder="Enter team name" placeholderTextColor="#9BA8A2" /></View>
             <View style={styles.field}>
               <Text style={styles.label}>Assigned ranger</Text>
               <View style={modernStyles.assignmentRow}><View style={[styles.pickerButton, modernStyles.assignmentPicker]}><Ionicons name="person-outline" size={19} color="#2B8263" /><Text style={[styles.pickerValue, !form.rangerName && styles.placeholder]}>{form.rangerName || 'No ranger assigned'}</Text></View>{editingPatrol && form.rangerName ? <Pressable style={[modernStyles.unassignButton, saving && styles.disabled]} onPress={unassignRanger} disabled={saving}><Ionicons name="person-remove-outline" size={17} color="#B34D3E" /><Text style={modernStyles.unassignText}>Unassign</Text></Pressable> : null}</View>
             </View>
             <View style={styles.field}>
-              <Text style={styles.label}>Available rangers</Text>
-              <Text style={styles.helpText}>Choose an available ranger, or unassign the current ranger to make them available again.</Text>
+              <Text style={styles.label}>Rangers for selected date</Text>
+              <Text style={styles.helpText}>Rangers assigned on this date are unavailable for another patrol.</Text>
               <View style={styles.rangerList}>
-                {rangerOptions.map((ranger) => {
+                {rangersLoading ? <ActivityIndicator color="#2B8263" /> : null}
+                {rangersError ? <Text style={{ color: '#71817A', fontSize: 12, paddingVertical: 8 }}>{rangersError}</Text> : null}
+                {!rangersLoading && !rangersError && rangerOptions.length === 0 ? <Text style={{ color: '#71817A', fontSize: 12, paddingVertical: 8 }}>No ranger profiles found in the rangers collection.</Text> : null}
+                {!rangersLoading && !rangersError ? rangerOptions.map((ranger) => {
                   const selected = form.rangerId === ranger.id || form.rangerName === ranger.name;
                   return (
                     <Pressable
@@ -333,7 +365,7 @@ export default function Patrols() {
                       <StatusPill value={ranger.status} />
                     </Pressable>
                   );
-                })}
+                }) : null}
               </View>
             </View>
             <View style={styles.field}><Text style={styles.label}>Patrol zone</Text><TextInput style={styles.input} value={form.zone} onChangeText={(value) => setForm((current) => ({ ...current, zone: value }))} placeholder="Enter patrol zone" placeholderTextColor="#9BA8A2" /></View>
@@ -347,6 +379,7 @@ export default function Patrols() {
                 <Pressable style={styles.toolButton} onPress={() => setForm((current) => ({ ...current, route: [], checkpoints: [] }))}><Text style={styles.toolText}>Clear</Text></Pressable>
               </View>
               <PatrolRouteMap
+                key={mapInstanceKey}
                 editable
                 mode={mapMode}
                 route={form.route}
@@ -354,7 +387,6 @@ export default function Patrols() {
                 onChange={({ route, checkpoints }) => setForm((current) => ({ ...current, route, checkpoints }))}
               />
             </View>
-            <View style={styles.field}><Text style={styles.label}>Patrol date</Text><Pressable style={styles.pickerButton} onPress={() => setDatePickerVisible((visible) => !visible)}><Ionicons name="calendar-outline" size={19} color="#2B8263" /><Text style={[styles.pickerValue, !form.date && styles.placeholder]}>{form.date || 'Choose a date'}</Text><Ionicons name={datePickerVisible ? 'chevron-up' : 'chevron-down'} size={17} color="#71817A" /></Pressable>{datePickerVisible && <DatePicker value={form.date} onChange={(date) => setForm((current) => ({ ...current, date }))} onClose={() => setDatePickerVisible(false)} />}</View>
             <View style={styles.timeRow}><View style={styles.timeField}><Text style={styles.label}>Start time</Text><Pressable style={styles.pickerButton} onPress={() => openTimePicker('startTime')}><Ionicons name="time-outline" size={19} color="#2B8263" /><Text style={[styles.pickerValue, !form.startTime && styles.placeholder]}>{form.startTime || 'Choose time'}</Text></Pressable></View><View style={styles.timeField}><Text style={styles.label}>End time <Text style={styles.optional}>(optional)</Text></Text><Pressable style={styles.pickerButton} onPress={() => openTimePicker('endTime')}><Ionicons name="time-outline" size={19} color="#2B8263" /><Text style={[styles.pickerValue, !form.endTime && styles.placeholder]}>{form.endTime || 'Choose time'}</Text></Pressable></View></View>
             <View style={styles.field}><Text style={styles.label}>Notes <Text style={styles.optional}>(optional)</Text></Text><TextInput style={styles.notesInput} value={form.notes} onChangeText={(value) => setForm((current) => ({ ...current, notes: value }))} placeholder="Add instructions for the ranger" placeholderTextColor="#9BA8A2" multiline /></View>
             {editingPatrol ? <Pressable style={[modernStyles.deleteButton, saving && styles.disabled]} onPress={deletePatrol} disabled={saving}><Ionicons name="trash-outline" size={17} color="#B34D3E" /><Text style={modernStyles.deleteText}>Delete Patrol</Text></Pressable> : null}

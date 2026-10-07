@@ -1,17 +1,17 @@
+import { getApps, initializeApp } from 'firebase/app';
+import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    setDoc,
+    updateDoc,
 } from 'firebase/firestore';
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { db, auth } from '../firebaseConfig';
-import { StaffUser, RangerProfileDoc, UserRole, AccountStatus } from '../../types/user';
 import { storageService } from '../../storage/asyncStorage';
 import { STORAGE_KEYS } from '../../storage/keys';
+import { AccountStatus, RangerProfileDoc, StaffUser, UserRole } from '../../types/user';
+import { auth, db } from '../firebaseConfig';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCicMF7Sos7NZgHjJ80Z_FiMI0wrpihNps",
@@ -217,6 +217,23 @@ export const userService = {
 
     const cachedStaff = await storageService.getItem<StaffUser[]>(STORAGE_KEYS.STAFF_USERS);
     return cachedStaff && cachedStaff.length > 0 ? cachedStaff : INITIAL_MOCK_STAFF;
+  },
+
+  /**
+   * Fetch ranger profiles from the rangers collection.
+   */
+  async getRangers(): Promise<RangerProfileDoc[]> {
+    try {
+      const snapshot = await getDocs(collection(db, 'rangers'));
+      if (!snapshot.empty) {
+        return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as RangerProfileDoc));
+      }
+    } catch {
+      // Fall back to the locally cached ranger profiles when offline.
+    }
+
+    const cachedRangers = await storageService.getItem<Record<string, RangerProfileDoc>>(STORAGE_KEYS.MOCK_RANGERS);
+    return cachedRangers ? Object.values(cachedRangers) : [];
   },
 
   /**
