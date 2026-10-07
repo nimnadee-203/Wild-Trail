@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +18,8 @@ import Colors from '../../constants/colors';
 import { useCameraPermission } from '../../hooks/useCameraPermission';
 import { useLocation } from '../../hooks/useLocation';
 import { formatCoordinates } from '../../utils/formatting';
+import { createIncident } from '../../services/api/incidents';
+import { IncidentCategory } from '../../types/incident';
 
 type IncidentType = 'Snare' | 'Carcass' | 'Illegal Campsite' | 'Wildlife Sighting' | 'Other';
 
@@ -52,6 +55,8 @@ export default function ReportIncidentScreen() {
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [manualLocation, setManualLocation] = useState('');
   const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [photoWarning, setPhotoWarning] = useState<string>();
 
   const coordinates = useMemo(
     () => manualLocation.trim() || formatCoordinates(location?.latitude, location?.longitude),
@@ -62,6 +67,10 @@ export default function ReportIncidentScreen() {
   const patrolId = 'PAT-1222-3255';
 
   const goBack = () => {
+    if (step === 4) {
+      router.back();
+      return;
+    }
     if (step > 1) {
       setStep((current) => current - 1);
     } else {
@@ -69,7 +78,42 @@ export default function ReportIncidentScreen() {
     }
   };
 
-  const submit = () => setStep(4);
+  const submit = async () => {
+    if (!description.trim()) {
+      Alert.alert('Description required', 'Please add a short description before submitting.');
+      return;
+    }
+    if (!location) {
+      Alert.alert('Location unavailable', 'Allow location access and try again before submitting.');
+      return;
+    }
+
+    const categoryByType: Record<IncidentType, IncidentCategory> = {
+      Snare: 'snare_detected',
+      Carcass: 'other',
+      'Illegal Campsite': 'other',
+      'Wildlife Sighting': 'wildlife_sighting',
+      Other: 'other',
+    };
+
+    setIsSubmitting(true);
+    try {
+      const result = await createIncident({
+        category: categoryByType[incidentType],
+        title: displayedIncidentType,
+        description,
+        location: manualLocation.trim() ? { ...location, address: manualLocation.trim() } : location,
+        photoUris: photos,
+      });
+      setPhotoWarning(result.photoWarning);
+      setStep(4);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to submit the incident.';
+      Alert.alert('Submission failed', message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -259,8 +303,13 @@ export default function ReportIncidentScreen() {
                 <SummaryRow label="Short Description:" value={description || 'No description added'} />
                 {photos.length > 0 && <Image source={{ uri: photos[photos.length - 1] }} style={styles.summaryPhoto} />}
               </View>
-              <TouchableOpacity style={styles.primaryButton} onPress={submit} activeOpacity={0.85}>
-                <Text style={styles.primaryButtonText}>Submit</Text>
+              <TouchableOpacity
+                style={[styles.primaryButton, isSubmitting && styles.disabledButton]}
+                onPress={submit}
+                disabled={isSubmitting}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.primaryButtonText}>{isSubmitting ? 'Submitting...' : 'Submit'}</Text>
               </TouchableOpacity>
               <View style={styles.offlineCard}>
                 <Ionicons name="cloud-offline-outline" size={32} color={Colors.light.text} />
@@ -288,10 +337,11 @@ export default function ReportIncidentScreen() {
                 </View>
                 <View>
                   <Text style={styles.successTitle}>Saved Successfully</Text>
-                  <Text style={styles.successTitle}>Synced</Text>
+                  <Text style={styles.successTitle}>{photoWarning ? 'Photos incomplete' : 'Synced'}</Text>
                   <Text style={styles.successMeta}>Date &amp; Time: {dateTime}</Text>
                 </View>
               </View>
+              {photoWarning && <Text style={styles.photoWarning}>{photoWarning}</Text>}
             </View>
           )}
         </ScrollView>
@@ -590,6 +640,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  photoWarning: { fontSize: 13, lineHeight: 20, color: '#9A5B18', marginTop: 12 },
   successTitle: { fontSize: 12, fontWeight: '700', color: Colors.light.text },
   successMeta: { fontSize: 10, color: Colors.light.text, marginTop: 5 },
 });
