@@ -51,7 +51,13 @@ export interface ScheduledPatrol {
 
 export type ScheduledPatrolInput = Omit<ScheduledPatrol, 'id' | 'createdAt' | 'updatedAt'>;
 
-export type RangerStatus = 'AVAILABLE' | 'ON_PATROL' | 'OFF_DUTY';
+export type RangerStatus =
+  | 'AVAILABLE'
+  | 'ON_PATROL'
+  | 'RESPONDING_TO_ALERT'
+  | 'OFF_DUTY'
+  | 'ON_LEAVE'
+  | 'UNAVAILABLE';
 
 export interface AssignedPatrol {
   id: string;
@@ -70,6 +76,7 @@ export interface ActualPathPoint {
   latitude: number;
   longitude: number;
   timestamp: string; // e.g. "08:02"
+  syncStatus?: 'PENDING_SYNC' | 'SUBMITTED';
 }
 
 export type WaypointType =
@@ -89,6 +96,28 @@ export interface MarkedWaypoint {
   timestampMs: number;
   type: WaypointType;
   notes?: string;
+  syncStatus?: 'PENDING_SYNC' | 'SUBMITTED';
+}
+
+export type ObservationType =
+  | 'Wildlife Sighting'
+  | 'Illegal Activity'
+  | 'Habitat Condition'
+  | 'Fence Damage'
+  | 'Water Source'
+  | 'Other';
+
+export interface PatrolObservation {
+  id: string;
+  patrolId?: string;
+  patrolName?: string;
+  park?: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+  type: ObservationType;
+  description: string;
+  syncStatus?: 'PENDING_SYNC' | 'SUBMITTED';
 }
 
 export interface ActivePatrolSession {
@@ -105,6 +134,23 @@ export interface ActivePatrolSession {
   pointCount: number;
   actualPath: ActualPathPoint[];
   markedWaypoints: MarkedWaypoint[];
+  observations: PatrolObservation[];
+}
+
+export interface CompletedPatrolSummary {
+  patrolId: string;
+  patrolName: string;
+  park: string;
+  priority: string;
+  startTime: string;
+  endTime: string;
+  distanceKm: number;
+  actualPath: ActualPathPoint[];
+  markedWaypoints: MarkedWaypoint[];
+  observations: PatrolObservation[];
+  patrolStatus: 'COMPLETED';
+  rangerStatus: 'AVAILABLE';
+  completedAt: string;
 }
 
 

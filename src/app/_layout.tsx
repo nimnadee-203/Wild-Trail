@@ -22,6 +22,8 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(ranger)" options={{ headerShown: false }} />
         <Stack.Screen name="(manager)" options={{ headerShown: false }} />
+        <Stack.Screen name="(admin)" options={{ headerShown: false }} />
+        <Stack.Screen name="(liaison)" options={{ headerShown: false }} />
       </Stack>
     </>
   );

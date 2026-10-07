@@ -7,31 +7,69 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../../constants/colors';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
+import { patrolApiService } from '../../../services/api/patrols';
+import { RangerStatus } from '../../../types/patrol';
 
 export default function ResponseConfirmationScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [alert, setAlert] = useState<any>(null);
+  const [alertData, setAlertData] = useState<any>(null);
+  const [rangerStatus, setRangerStatus] = useState<RangerStatus>('RESPONDING_TO_ALERT');
 
   useEffect(() => {
     const fetchAlert = async () => {
       if (!id) return;
-      const docRef = doc(db, 'alerts', id as string);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setAlert({ id: docSnap.id, ...docSnap.data() });
+      try {
+        const docRef = doc(db, 'alerts', id as string);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setAlertData({ id: docSnap.id, ...docSnap.data() });
+        }
+      } catch (e) {
+        console.error(e);
       }
     };
     fetchAlert();
   }, [id]);
 
-  if (!alert) {
+  useEffect(() => {
+    const fetchStatus = async () => {
+      const currentStatus = await patrolApiService.getRangerStatus();
+      setRangerStatus(currentStatus);
+    };
+    fetchStatus();
+  }, []);
+
+  const handleCompleteResponse = async () => {
+    try {
+      if (id) {
+        const alertRef = doc(db, 'alerts', id as string);
+        await updateDoc(alertRef, { status: 'RESOLVED' });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+
+    await patrolApiService.setRangerStatus('AVAILABLE');
+    setRangerStatus('AVAILABLE');
+
+    if (Platform.OS === 'web') {
+      window.alert('Response completed! Ranger status updated to AVAILABLE.');
+    } else {
+      Alert.alert('Response Completed', 'Alert response completed! Ranger status updated to AVAILABLE.');
+    }
+
+    router.push('/dashboard');
+  };
+
+  if (!alertData) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
@@ -40,7 +78,7 @@ export default function ResponseConfirmationScreen() {
           </TouchableOpacity>
         </View>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text>Confirming response...</Text>
+          <Text style={{ color: '#4B5563', fontSize: 16 }}>Confirming response details...</Text>
         </View>
       </SafeAreaView>
     );
@@ -56,7 +94,7 @@ export default function ResponseConfirmationScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Response Confirmation</Text>
+        <Text style={styles.headerTitle}>Response Navigation</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -65,37 +103,46 @@ export default function ResponseConfirmationScreen() {
           <View style={styles.checkCircle}>
             <Ionicons name="checkmark" size={48} color="#FFFFFF" />
           </View>
-          <Text style={styles.successTitle}>Alert Acknowledged</Text>
-          <Text style={styles.successSubtitle}>You have been assigned to respond</Text>
+          <Text style={styles.successTitle}>Alert Accepted</Text>
+          <Text style={styles.successSubtitle}>Active Dispatch & Wildlife Conflict Response</Text>
         </View>
 
         <View style={styles.detailCard}>
           <View style={styles.detailRow}>
+            <Ionicons name="shield" size={18} color="#EF4444" style={styles.detailIcon} />
+            <Text style={styles.detailLabel}>Ranger Status</Text>
+            <View style={styles.statusBadgeWrap}>
+              <Text style={styles.statusBadgeTextVal}>
+                {rangerStatus.replace(/_/g, ' ')}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.detailRow}>
             <Ionicons name="paw" size={18} color="#4B5563" style={styles.detailIcon} />
-            <Text style={styles.detailLabel}>Elephant ID</Text>
-            <Text style={styles.detailValue}>{alert.animalId}</Text>
+            <Text style={styles.detailLabel}>Animal Target</Text>
+            <Text style={styles.detailValue}>{alertData.animalId || 'Elephant E-014'}</Text>
           </View>
           <View style={styles.detailRow}>
             <Ionicons name="location" size={18} color="#4B5563" style={styles.detailIcon} />
-            <Text style={styles.detailLabel}>Location</Text>
-            <Text style={styles.detailValue}>{alert.location}</Text>
+            <Text style={styles.detailLabel}>Risk Sector</Text>
+            <Text style={styles.detailValue}>{alertData.location || 'Farmland Zone B'}</Text>
           </View>
           <View style={styles.detailRow}>
             <Ionicons name="warning" size={18} color="#4B5563" style={styles.detailIcon} />
             <Text style={styles.detailLabel}>Risk Level</Text>
-            <Text style={[styles.detailValue, alert.level === 'HIGH' ? styles.riskHighText : styles.riskMedText]}>
-              {alert.level}
+            <Text style={[styles.detailValue, alertData.level === 'HIGH' ? styles.riskHighText : styles.riskMedText]}>
+              {alertData.level || 'HIGH'}
             </Text>
           </View>
           <View style={styles.detailRow}>
             <Ionicons name="time-outline" size={18} color="#4B5563" style={styles.detailIcon} />
-            <Text style={styles.detailLabel}>Acknowledged At</Text>
-            <Text style={styles.detailValue}>{alert.timestamp}</Text>
+            <Text style={styles.detailLabel}>Timestamp</Text>
+            <Text style={styles.detailValue}>{alertData.timestamp || '07:43 PM'}</Text>
           </View>
           <View style={styles.detailRow}>
             <Ionicons name="person" size={18} color="#4B5563" style={styles.detailIcon} />
-            <Text style={styles.detailLabel}>Assigned To</Text>
-            <Text style={styles.detailValue}>Ranger S. Perera</Text>
+            <Text style={styles.detailLabel}>Assigned Actor</Text>
+            <Text style={styles.detailValue}>Ranger Nimal (Group 027)</Text>
           </View>
         </View>
 
@@ -103,7 +150,7 @@ export default function ResponseConfirmationScreen() {
           <Ionicons name="radio" size={32} color={Colors.light.primaryDark} />
           <View style={styles.instructionTextWrap}>
             <Text style={styles.instructionText}>
-              You are now the responding Ranger. Proceed to the location safely.
+              Status set to <Text style={{ fontWeight: '800' }}>RESPONDING_TO_ALERT</Text>. Proceed to site safely and tap Complete when conflict resolution is finished.
             </Text>
           </View>
         </View>
@@ -111,7 +158,7 @@ export default function ResponseConfirmationScreen() {
         <View style={styles.actionsContainer}>
           <TouchableOpacity
             style={styles.mapBtn}
-            onPress={() => router.push({ pathname: '/map', params: { respondingAlertId: alert.id } })}
+            onPress={() => router.push({ pathname: '/map', params: { respondingAlertId: alertData.id } })}
             activeOpacity={0.8}
           >
             <Ionicons name="map" size={20} color="#FFFFFF" />
@@ -120,12 +167,21 @@ export default function ResponseConfirmationScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={styles.completeBtn}
+            onPress={handleCompleteResponse}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="checkmark-done-circle" size={22} color="#FFFFFF" />
+            <Text style={styles.completeBtnText}>Complete Response (Set Available)</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.backAlertsBtn}
             onPress={() => router.push('/alerts')}
             activeOpacity={0.8}
           >
             <Ionicons name="chevron-back" size={20} color="#111827" />
-            <Text style={styles.backAlertsBtnText}>Back to Alerts</Text>
+            <Text style={styles.backAlertsBtnText}>Back to Alerts Feed</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -264,6 +320,35 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     flex: 1,
     textAlign: 'center',
+  },
+  statusBadgeWrap: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#EF4444',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  statusBadgeTextVal: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#DC2626',
+    letterSpacing: 0.3,
+  },
+  completeBtn: {
+    backgroundColor: '#059669',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  completeBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   backAlertsBtn: {
     backgroundColor: '#FFFFFF',
