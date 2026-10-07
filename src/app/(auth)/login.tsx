@@ -57,6 +57,7 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
+        <Button title="Community: Report Wildlife Incident" onPress={() => router.push('/community-report')} />
         <Text style={styles.heading}>Wildlife Protection System</Text>
         <Text style={styles.subheading}>Staff & Operations Portal Login</Text>
 

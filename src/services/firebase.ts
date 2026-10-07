@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getPersistentAuth } from './persistentAuth';
 import { initializeFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -15,7 +15,7 @@ const firebaseConfig = {
 // Initialize Firebase safely (prevents duplicate app error during Fast Refresh)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-export const auth = getAuth(app);
+export const auth = getPersistentAuth(app);
 // Avoid streaming WebChannel requests that can stall on mobile networks/proxies.
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,

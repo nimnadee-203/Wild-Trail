@@ -23,7 +23,7 @@ export async function getIncidentReporter(): Promise<User> {
       .catch((error: unknown) => {
         if (error instanceof FirebaseError && error.code === 'auth/operation-not-allowed') {
           throw new Error(
-            'Enable Anonymous sign-in in Firebase Authentication to report as the default ranger.'
+            'Enable Anonymous sign-in in Firebase Authentication to submit reports without an account.'
           );
         }
         throw error;
