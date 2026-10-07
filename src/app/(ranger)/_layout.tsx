@@ -79,6 +79,7 @@ export default function RangerLayout() {
       />
 
       {/* Sub-screens accessed via actions, hidden from bottom tab icons */}
+      <Tabs.Screen name="incident-reports" options={{ href: null, title: 'My Incident Reports' }} />
       <Tabs.Screen
         name="map"
         options={{
