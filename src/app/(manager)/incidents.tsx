@@ -28,7 +28,8 @@ export default function Incidents() {
             type: report.title,
             location:
               report.location.address ??
-              `${report.location.latitude.toFixed(4)}, ${report.location.longitude.toFixed(4)}`,
+              (typeof report.location.latitude === 'number' && typeof report.location.longitude === 'number'
+                ? `${report.location.latitude.toFixed(4)}, ${report.location.longitude.toFixed(4)}` : 'Location not provided'),
             reporter: report.reporterName ?? report.reporterId,
             priority: report.severity,
             status: formatStatus(report.status),

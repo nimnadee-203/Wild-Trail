@@ -325,6 +325,9 @@ export default function DashboardScreen() {
         </View>
 
         {/* Quick Actions Grid */}
+        <TouchableOpacity style={styles.reportIncidentBtn} onPress={() => router.push('/community-operations')}>
+          <Text style={styles.reportIncidentTitle}>Community Reports & Response</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.reportIncidentBtn}
           onPress={() => router.push('/(ranger)/incident-reports')}

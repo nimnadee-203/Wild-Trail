@@ -54,6 +54,9 @@ export default function LiaisonDashboardScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <TouchableOpacity style={styles.bannerCard} onPress={() => router.push('/community-operations')}>
+          <Text style={styles.bannerTitle}>Community Reports & Response</Text>
+        </TouchableOpacity>
         {/* Banner Card */}
         <View style={styles.bannerCard}>
           <Ionicons name="people" size={32} color="#0284C7" />
