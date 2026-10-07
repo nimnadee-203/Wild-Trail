@@ -10,10 +10,63 @@ import {
   StatusBar,
   Alert,
   Platform,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
+
+export interface AssignedPatrolItem {
+  id: string;
+  nationalPark: string;
+  route: string;
+  scheduleWindow: string;
+  date: string;
+  teamName: string;
+  rangerName: string;
+  status: 'ACTIVE' | 'SCHEDULED' | 'COMPLETED';
+  sector: string;
+  notes: string;
+}
+
+const ASSIGNED_PATROLS_DATA: AssignedPatrolItem[] = [
+  {
+    id: 'patrol-101',
+    nationalPark: 'Yala National Park',
+    route: 'Block 1 – Wildlife Trail',
+    scheduleWindow: '08:00 AM - 12:00 PM',
+    date: 'Today',
+    teamName: 'Alpha Squad',
+    rangerName: 'Ranger Nimal',
+    status: 'ACTIVE',
+    sector: 'Sector 1 (Southern Boundary)',
+    notes: 'Primary anti-poaching foot patrol. Inspect snare traps and track Elephant E-014 buffer movement.',
+  },
+  {
+    id: 'patrol-102',
+    nationalPark: 'Yala National Park',
+    route: 'Block 3 – River Bank Corridor',
+    scheduleWindow: '02:00 PM - 06:00 PM',
+    date: 'Today',
+    teamName: 'Bravo Recon',
+    rangerName: 'Ranger Nimal',
+    status: 'SCHEDULED',
+    sector: 'Sector 3 (River Corridor)',
+    notes: 'Monitor waterholes for illegal night camping & poaching activities.',
+  },
+  {
+    id: 'patrol-103',
+    nationalPark: 'Yala National Park',
+    route: 'Block 5 – Coastal Dune Sector',
+    scheduleWindow: '06:00 AM - 10:00 AM',
+    date: 'Tomorrow',
+    teamName: 'Delta Patrol',
+    rangerName: 'Ranger Nimal',
+    status: 'SCHEDULED',
+    sector: 'Sector 5 (Coastal Perimeter)',
+    notes: 'Boundary fence inspection & GPS camera trap maintenance.',
+  },
+];
 
 const ELEPHANT_E014_IMG =
   'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Asian_elephant_-_melbourne_zoo.jpg/320px-Asian_elephant_-_melbourne_zoo.jpg';
@@ -69,6 +122,12 @@ const RECENT_ALERTS: AlertItem[] = [
 export default function DashboardScreen() {
   const router = useRouter();
   const [broadcastSent, setBroadcastSent] = useState(false);
+  const [showAllPatrols, setShowAllPatrols] = useState(false);
+  const [selectedPatrol, setSelectedPatrol] = useState<AssignedPatrolItem | null>(null);
+
+  const visiblePatrols = showAllPatrols
+    ? ASSIGNED_PATROLS_DATA
+    : ASSIGNED_PATROLS_DATA.slice(0, 1);
 
   const handleBroadcastAlert = () => {
     Alert.alert(
@@ -125,35 +184,75 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Assigned Patrol Details Card */}
-        <View style={styles.assignedPatrolCard}>
-          <View style={styles.assignedPatrolHeader}>
-            <View style={styles.assignedPatrolBadge}>
-              <Text style={styles.assignedPatrolBadgeText}>ASSIGNED PATROL</Text>
-            </View>
-            <View style={styles.locationPinWrap}>
-              <Ionicons name="location-outline" size={20} color="#A7F3D0" />
-            </View>
-          </View>
+        {/* Assigned Patrols List */}
+        {visiblePatrols.map((patrol) => (
+          <View key={patrol.id} style={styles.assignedPatrolCard}>
+            <View style={styles.assignedPatrolHeader}>
+              <View style={styles.badgeAndStatusRow}>
+                <View style={styles.assignedPatrolBadge}>
+                  <Text style={styles.assignedPatrolBadgeText}>ASSIGNED PATROL</Text>
+                </View>
+                <View
+                  style={[
+                    styles.statusTag,
+                    patrol.status === 'ACTIVE'
+                      ? styles.statusTagActive
+                      : styles.statusTagScheduled,
+                  ]}
+                >
+                  <Text style={styles.statusTagText}>{patrol.status}</Text>
+                </View>
+              </View>
 
-          <View style={styles.patrolFieldGroup}>
-            <Text style={styles.patrolFieldLabel}>NATIONAL PARK</Text>
-            <Text style={styles.patrolFieldValueMain}>Yala National Park</Text>
-          </View>
+              <TouchableOpacity
+                style={styles.viewPatrolBtn}
+                onPress={() => setSelectedPatrol(patrol)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="eye-outline" size={15} color="#4ADE80" />
+                <Text style={styles.viewPatrolBtnText}>View</Text>
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.patrolFieldGroup}>
-            <Text style={styles.patrolFieldLabel}>ACTIVE SECTOR ROUTE</Text>
-            <Text style={styles.patrolFieldValueSub}>Block 1 – Wildlife Trail</Text>
-          </View>
+            <View style={styles.patrolFieldGroup}>
+              <Text style={styles.patrolFieldLabel}>NATIONAL PARK</Text>
+              <Text style={styles.patrolFieldValueMain}>{patrol.nationalPark}</Text>
+            </View>
 
-          <View style={styles.patrolFieldGroup}>
-            <Text style={styles.patrolFieldLabel}>SCHEDULE WINDOW</Text>
-            <View style={styles.scheduleRow}>
-              <Ionicons name="time-outline" size={18} color="#FFFFFF" />
-              <Text style={styles.scheduleText}>08:00 AM - 12:00 PM</Text>
+            <View style={styles.patrolFieldGroup}>
+              <Text style={styles.patrolFieldLabel}>ACTIVE SECTOR ROUTE</Text>
+              <Text style={styles.patrolFieldValueSub}>{patrol.route}</Text>
+            </View>
+
+            <View style={styles.patrolFieldGroup}>
+              <Text style={styles.patrolFieldLabel}>SCHEDULE WINDOW</Text>
+              <View style={styles.scheduleRow}>
+                <Ionicons name="time-outline" size={18} color="#FFFFFF" />
+                <Text style={styles.scheduleText}>{patrol.scheduleWindow}</Text>
+              </View>
             </View>
           </View>
-        </View>
+        ))}
+
+        {/* Show All Assigned Patrols Toggle Button */}
+        {ASSIGNED_PATROLS_DATA.length > 1 && (
+          <TouchableOpacity
+            style={styles.showAllPatrolsBtn}
+            onPress={() => setShowAllPatrols(!showAllPatrols)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.showAllPatrolsText}>
+              {showAllPatrols
+                ? 'Hide Additional Patrols'
+                : `Show All Assigned Patrols (${ASSIGNED_PATROLS_DATA.length})`}
+            </Text>
+            <Ionicons
+              name={showAllPatrols ? 'chevron-up' : 'chevron-down'}
+              size={18}
+              color="#4ADE80"
+            />
+          </TouchableOpacity>
+        )}
 
         {/* System Status Grid (GPS & Offline Sync) */}
         <View style={styles.statusGridRow}>
@@ -309,6 +408,101 @@ export default function DashboardScreen() {
         </View>
 
       </ScrollView>
+
+      {/* Patrol Details Modal */}
+      <Modal
+        visible={selectedPatrol !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedPatrol(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderTitleRow}>
+                <Ionicons name="shield-checkmark" size={22} color="#4ADE80" />
+                <Text style={styles.modalTitle}>Patrol Details</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setSelectedPatrol(null)}
+                style={styles.modalCloseBtn}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={22} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            {selectedPatrol && (
+              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                <View style={styles.modalStatusRow}>
+                  <Text style={styles.modalRouteTitle}>{selectedPatrol.route}</Text>
+                  <View
+                    style={[
+                      styles.statusTag,
+                      selectedPatrol.status === 'ACTIVE'
+                        ? styles.statusTagActive
+                        : styles.statusTagScheduled,
+                    ]}
+                  >
+                    <Text style={styles.statusTagText}>{selectedPatrol.status}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.modalDetailGroup}>
+                  <Text style={styles.modalDetailLabel}>NATIONAL PARK</Text>
+                  <Text style={styles.modalDetailValue}>{selectedPatrol.nationalPark}</Text>
+                </View>
+
+                <View style={styles.modalDetailGroup}>
+                  <Text style={styles.modalDetailLabel}>SECTOR / ZONE</Text>
+                  <Text style={styles.modalDetailValue}>{selectedPatrol.sector}</Text>
+                </View>
+
+                <View style={styles.modalDetailGroup}>
+                  <Text style={styles.modalDetailLabel}>SCHEDULE WINDOW</Text>
+                  <Text style={styles.modalDetailValue}>
+                    {selectedPatrol.scheduleWindow} ({selectedPatrol.date})
+                  </Text>
+                </View>
+
+                <View style={styles.modalDetailGroup}>
+                  <Text style={styles.modalDetailLabel}>ASSIGNED TEAM & RANGER</Text>
+                  <Text style={styles.modalDetailValue}>
+                    {selectedPatrol.teamName} • {selectedPatrol.rangerName}
+                  </Text>
+                </View>
+
+                <View style={styles.modalDetailGroup}>
+                  <Text style={styles.modalDetailLabel}>FIELD INSTRUCTIONS & NOTES</Text>
+                  <Text style={styles.modalNotesValue}>{selectedPatrol.notes}</Text>
+                </View>
+              </ScrollView>
+            )}
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.startPatrolModalBtn}
+                onPress={() => {
+                  setSelectedPatrol(null);
+                  router.push('/patrol');
+                }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="footsteps" size={18} color="#FFFFFF" />
+                <Text style={styles.startPatrolModalBtnText}>Start This Patrol</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.closeModalBtn}
+                onPress={() => setSelectedPatrol(null)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.closeModalBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -431,27 +625,79 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  badgeAndStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   assignedPatrolBadge: {
     backgroundColor: '#20392C',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#2B4D3C',
   },
   assignedPatrolBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.8,
     color: '#A7F3D0',
   },
-  locationPinWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#20392C',
-    justifyContent: 'center',
+  statusTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  statusTagActive: {
+    backgroundColor: 'rgba(74, 222, 128, 0.2)',
+    borderWidth: 1,
+    borderColor: '#4ADE80',
+  },
+  statusTagScheduled: {
+    backgroundColor: 'rgba(217, 119, 6, 0.2)',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  statusTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  viewPatrolBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#20392C',
+    borderWidth: 1,
+    borderColor: '#2B4D3C',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 5,
+  },
+  viewPatrolBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4ADE80',
+  },
+  showAllPatrolsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#16271F',
+    borderWidth: 1,
+    borderColor: '#223B2E',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 14,
+    gap: 6,
+  },
+  showAllPatrolsText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#4ADE80',
   },
   patrolFieldGroup: {
     marginTop: 10,
@@ -485,6 +731,128 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    width: '100%',
+    maxHeight: '82%',
+    backgroundColor: '#16271F',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#294B3B',
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#223B2E',
+    marginBottom: 14,
+  },
+  modalHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#20392C',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBody: {
+    marginBottom: 16,
+  },
+  modalStatusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  modalRouteTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    flex: 1,
+    marginRight: 10,
+  },
+  modalDetailGroup: {
+    marginBottom: 12,
+  },
+  modalDetailLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: '#8EA69A',
+  },
+  modalDetailValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 2,
+  },
+  modalNotesValue: {
+    fontSize: 14,
+    color: '#A7F3D0',
+    marginTop: 4,
+    lineHeight: 20,
+    backgroundColor: '#0F1D17',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#223B2E',
+  },
+  modalFooter: {
+    gap: 10,
+  },
+  startPatrolModalBtn: {
+    backgroundColor: Colors.light.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  startPatrolModalBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  closeModalBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#223B2E',
+  },
+  closeModalBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#9CA3AF',
   },
 
   // System Status Grid
