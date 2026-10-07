@@ -1,7 +1,6 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ManagerShell, managerStyles } from '../../components/manager/ManagerShell';
 import { FilterButton, StatusPill } from '../../components/manager/ManagerUI';
 import { getFirebaseIncidents } from '../../services/api/incidents';
@@ -17,11 +16,9 @@ export default function Incidents() {
     { id: string; type: string; location: string; reporter: string; priority: string; status: string; date: string }[]
   >([]);
 
-  useFocusEffect(useCallback(() => {
-    let active = true;
+  useEffect(() => {
     getFirebaseIncidents()
-      .then((reports) => {
-        if (!active) return;
+      .then((reports) =>
         setIncidentData(
           reports.map((report) => ({
             id: report.id,
@@ -29,23 +26,17 @@ export default function Incidents() {
             location:
               report.location.address ??
               `${report.location.latitude.toFixed(4)}, ${report.location.longitude.toFixed(4)}`,
-            reporter: report.reporterName ?? report.reporterId,
+            reporter: report.reporterId,
             priority: report.severity,
             status: formatStatus(report.status),
             date: new Date(report.createdAt).toLocaleDateString(),
           }))
-        );
-      })
+        )
+      )
       .catch((error) => {
-        if (!active) return;
-        setIncidentData([]);
-        const denied = typeof error === 'object' && error !== null && 'code' in error && error.code === 'permission-denied';
-        Alert.alert('Unable to load incidents', denied
-          ? 'This Firebase session does not have park manager access. Configure a manager role or a temporary manager UID in Firestore rules.'
-          : error instanceof Error ? error.message : 'Please try again.');
+        Alert.alert('Unable to load incidents', error instanceof Error ? error.message : 'Please try again.');
       });
-    return () => { active = false; };
-  }, []));
+  }, []);
 
   const filtered = useMemo(
     () =>
