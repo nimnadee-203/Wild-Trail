@@ -32,5 +32,13 @@ service cloud.firestore {
 
       allow delete: if false;
     }
+
+    match /assignedPatrols/{patrolId} {
+      allow read, write: if isTemporaryManagerReader() || isManager();
+    }
+
+    match /rangers/{rangerId} {
+      allow read: if isTemporaryManagerReader() || isManager();
+    }
   }
 }
