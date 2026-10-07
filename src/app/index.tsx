@@ -1,10 +1,57 @@
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { Badge, Button, Card } from '../components/ui';
 import Colors from '../constants/colors';
+import { storageService } from '../storage/asyncStorage';
+import { STORAGE_KEYS } from '../storage/keys';
+import { StaffUser } from '../types/user';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    async function checkAuthAndRedirect() {
+      const userProfile = await storageService.getItem<StaffUser>(STORAGE_KEYS.USER_PROFILE);
+
+      if (!userProfile || userProfile.accountStatus === 'DISABLED') {
+        setIsCheckingAuth(false);
+        router.replace('/(auth)/login');
+        return;
+      }
+
+      // Auto-route logged in staff user to their role-specific dashboard
+      switch (userProfile.role) {
+        case 'admin':
+          router.replace('/(admin)/users' as any);
+          break;
+        case 'manager':
+          router.replace('/(manager)/overview' as any);
+          break;
+        case 'liaison':
+          router.replace('/(liaison)/dashboard' as any);
+          break;
+        case 'ranger':
+        default:
+          router.replace('/(ranger)/dashboard' as any);
+          break;
+      }
+    }
+
+    checkAuthAndRedirect();
+  }, [router]);
+
+  if (isCheckingAuth) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+        <Text style={{ marginTop: 12, fontSize: 14, color: Colors.light.muted }}>
+          Verifying Authentication Status...
+        </Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -13,29 +60,10 @@ export default function HomeScreen() {
           <Text style={styles.title}>
             Wildlife Protection & Monitoring System
           </Text>
-
           <Text style={styles.subtitle}>
             SE3070 Case Studies in Software Engineering Mobile Application
           </Text>
         </View>
-
-        <Card style={styles.portalCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Ranger Portal</Text>
-            <Badge label="Ranger Access" variant="success" />
-          </View>
-
-          <Text style={styles.cardDescription}>
-            GPS patrol tracking, incident reporting (poaching / illegal activity),
-            and wildlife risk alert monitoring.
-          </Text>
-
-          <Button
-            title="Open Ranger Dashboard"
-            variant="primary"
-            onPress={() => router.push('/(ranger)/dashboard')}
-          />
-        </Card>
 
         <Card style={styles.portalCard}>
           <View style={styles.cardHeader}>
