@@ -1,12 +1,20 @@
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
 import { useRoleGuard } from '../../hooks/useRoleGuard';
 
 export default function RangerLayout() {
-  useRoleGuard(['ranger', 'admin']);
+  const { isChecking, isAuthorized } = useRoleGuard(['ranger', 'admin']);
+
+  if (isChecking || !isAuthorized) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+      </View>
+    );
+  }
 
   return (
     <Tabs
@@ -98,6 +106,12 @@ export default function RangerLayout() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   iconWrap: {
     position: 'relative',
   },
