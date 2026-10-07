@@ -9,6 +9,8 @@ export async function readIncidentPhoto(uri: string) {
   if (file.size >= 10 * 1024 * 1024) {
     throw new Error('The selected photo must be smaller than 10 MB.');
   }
-  const data = await file.bytes();
-  return { data, contentType: file.type || 'image/jpeg', size: data.byteLength };
+  const contentType = file.type || 'image/jpeg';
+  // Expo fetch's multipart converter reads File.bytes() directly. URI-only
+  // React Native descriptors are unsupported by that converter.
+  return { data: file, contentType, size: file.size };
 }

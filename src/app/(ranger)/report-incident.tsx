@@ -46,7 +46,9 @@ const formatDate = () =>
 export default function ReportIncidentScreen() {
   const router = useRouter();
   const { location } = useLocation();
-  const { photos, takePhotoWithCamera } = useCameraPermission();
+  const { photos, takePhotoWithCamera, pickImageFromGallery, addPhoto, removePhoto } = useCameraPermission();
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
+  const [isChoosingPhoto, setIsChoosingPhoto] = useState(false);
   const [step, setStep] = useState(1);
   const [incidentType, setIncidentType] = useState<IncidentType>('Snare');
   const [customIncidentType, setCustomIncidentType] = useState('');
@@ -65,6 +67,25 @@ export default function ReportIncidentScreen() {
   const displayedIncidentType =
     incidentType === 'Other' ? customIncidentType.trim() || 'Other' : incidentType;
   const patrolId = 'PAT-1222-3255';
+
+  const choosePhoto = async (source: 'camera' | 'gallery') => {
+    setIsChoosingPhoto(true);
+    try {
+      const uri = await (source === 'camera' ? takePhotoWithCamera() : pickImageFromGallery());
+      if (uri) setPendingPhoto(uri);
+    } catch (error) {
+      Alert.alert('Unable to select photo', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setIsChoosingPhoto(false);
+    }
+  };
+
+  const attachPhoto = () => {
+    if (pendingPhoto) {
+      addPhoto(pendingPhoto);
+      setPendingPhoto(null);
+    }
+  };
 
   const goBack = () => {
     if (step === 4) {
@@ -275,18 +296,40 @@ export default function ReportIncidentScreen() {
                 textAlignVertical="top"
               />
 
-              <TouchableOpacity style={styles.photoButton} onPress={takePhotoWithCamera} activeOpacity={0.8}>
+              <TouchableOpacity style={styles.photoButton} onPress={() => choosePhoto('camera')} disabled={isChoosingPhoto} activeOpacity={0.8}>
                 <Ionicons name="camera" size={19} color={Colors.light.primaryDark} />
                 <Text style={styles.outlineButtonText}>Take Photo</Text>
               </TouchableOpacity>
-              {photos.length > 0 ? (
-                <Image source={{ uri: photos[photos.length - 1] }} style={styles.photoPreview} />
-              ) : (
+              <TouchableOpacity style={styles.photoButton} onPress={() => choosePhoto('gallery')} disabled={isChoosingPhoto} activeOpacity={0.8}>
+                <Ionicons name="images-outline" size={19} color={Colors.light.primaryDark} />
+                <Text style={styles.outlineButtonText}>Choose from Gallery</Text>
+              </TouchableOpacity>
+              {pendingPhoto && (
+                <View>
+                  <Image source={{ uri: pendingPhoto }} style={styles.photoPreview} />
+                  <TouchableOpacity style={styles.primaryButton} onPress={attachPhoto} activeOpacity={0.85}>
+                    <Text style={styles.primaryButtonText}>Upload Image</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.photoHelp}>Adds this photo to your report. Photos are uploaded when you submit.</Text>
+                  <TouchableOpacity style={styles.photoButton} onPress={() => setPendingPhoto(null)}>
+                    <Text style={styles.outlineButtonText}>Discard Photo</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {photos.map((uri, index) => (
+                <View key={`${uri}-${index}`}>
+                  <Image source={{ uri }} style={styles.photoPreview} />
+                  <TouchableOpacity style={styles.photoButton} onPress={() => removePhoto(index)} accessibilityLabel={`Remove photo ${index + 1}`}>
+                    <Text style={styles.outlineButtonText}>Remove Photo {index + 1}</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {photos.length === 0 && !pendingPhoto && (
                 <View style={styles.photoEmpty}>
                   <Ionicons name="image-outline" size={56} color="#C4CDC7" />
                 </View>
               )}
-              <TouchableOpacity style={styles.primaryButton} onPress={() => setStep(3)} activeOpacity={0.85}>
+              <TouchableOpacity style={[styles.primaryButton, (isChoosingPhoto || !!pendingPhoto) && styles.disabledButton]} disabled={isChoosingPhoto || !!pendingPhoto} onPress={() => setStep(3)} activeOpacity={0.85}>
                 <Text style={styles.primaryButtonText}>Next</Text>
               </TouchableOpacity>
             </View>
@@ -330,6 +373,15 @@ export default function ReportIncidentScreen() {
                 <SummaryRow label="Incident Type:" value={displayedIncidentType} />
                 <SummaryRow label="Date & Time:" value={dateTime} />
                 <SummaryRow label="Short Description:" value={description || 'No description added'} />
+                {photos.map((uri, index) => (
+                  <Image
+                    key={`${uri}-${index}`}
+                    source={{ uri }}
+                    style={styles.confirmationPhoto}
+                    resizeMode="contain"
+                    accessibilityLabel={`Incident photo ${index + 1}`}
+                  />
+                ))}
               </View>
               <View style={styles.successCard}>
                 <View style={styles.successIcon}>
@@ -581,6 +633,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   photoPreview: { height: 120, borderRadius: 7, marginTop: 8 },
+  photoHelp: { fontSize: 12, lineHeight: 18, color: Colors.light.text, marginTop: 8 },
   primaryButton: {
     height: 38,
     borderRadius: 6,
@@ -606,6 +659,7 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: 10, fontWeight: '700', color: Colors.light.text },
   summaryValue: { fontSize: 10, color: Colors.light.primaryDark, marginTop: 2, lineHeight: 14 },
   summaryPhoto: { height: 92, borderRadius: 7, marginTop: 2 },
+  confirmationPhoto: { width: '100%', height: 200, borderRadius: 7, marginTop: 10 },
   offlineCard: {
     minHeight: 62,
     borderWidth: 1,
