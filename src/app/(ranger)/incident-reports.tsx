@@ -1,3 +1,4 @@
+import { WildTrailBrand } from '../../components/WildTrailBrand';
 import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,7 +48,7 @@ export default function IncidentReportsScreen() {
         <Pressable onPress={() => router.replace('/(ranger)/dashboard')} accessibilityLabel="Back to dashboard" hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={Colors.light.primaryDark} />
         </Pressable>
-        <Text style={styles.heading}>My Incident Reports</Text>
+        <WildTrailBrand title="My Incident Reports" />
       </View>
       <Text style={styles.subtitle}>{reports.length} reports · Pull down to refresh statuses</Text>
       {error && (

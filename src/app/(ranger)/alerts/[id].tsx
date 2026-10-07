@@ -1,3 +1,4 @@
+import { WildTrailBrand } from '../../../components/WildTrailBrand';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -59,7 +60,7 @@ export default function AlertDetailsScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Risk Alert Details</Text>
+        <WildTrailBrand light title="Risk Alert Details" />
         <View style={{ width: 24 }} />
       </View>
 

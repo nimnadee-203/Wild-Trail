@@ -1,3 +1,4 @@
+import { WildTrailBrand } from '../../../components/WildTrailBrand';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -132,8 +133,7 @@ export default function AlertsScreen() {
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>Wildlife Risk Alerts</Text>
-            <Text style={styles.headerSubtitle}>Active Geofence Breaches & Early Warnings</Text>
+            <WildTrailBrand light title="Wildlife Risk Alerts" />
           </View>
         </View>
 

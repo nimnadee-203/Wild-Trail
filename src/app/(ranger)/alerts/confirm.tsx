@@ -1,3 +1,4 @@
+import { WildTrailBrand } from '../../../components/WildTrailBrand';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -94,7 +95,7 @@ export default function ResponseConfirmationScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Response Navigation</Text>
+        <WildTrailBrand light title="Response Navigation" />
         <View style={{ width: 24 }} />
       </View>
 
