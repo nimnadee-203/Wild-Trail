@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Platform, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, Badge } from '../../components/ui';
 import { useLocation } from '../../hooks/useLocation';
 import { formatCoordinates } from '../../utils/formatting';
 import Colors from '../../constants/colors';
+import { patrolApiService } from '../../services/api/patrols';
 
 export default function PatrolScreen() {
   const router = useRouter();
@@ -38,9 +39,22 @@ export default function PatrolScreen() {
     }
   }, [isPatrolling]);
 
-  const togglePatrol = () => {
-    setIsPatrolling((prev) => !prev);
-    if (!isPatrolling) {
+  const togglePatrol = async () => {
+    if (isPatrolling) {
+      if (patrolId) {
+        await patrolApiService.endPatrolSession(patrolId);
+      }
+      setIsPatrolling(false);
+      Alert.alert(
+        'Patrol Session Ended',
+        'Patrol status updated to COMPLETED and Ranger status returned to AVAILABLE.',
+        [
+          { text: 'Return to Dashboard', onPress: () => router.push('/dashboard') },
+          { text: 'Stay Here', style: 'cancel' },
+        ]
+      );
+    } else {
+      setIsPatrolling(true);
       setPointCount(1);
     }
   };

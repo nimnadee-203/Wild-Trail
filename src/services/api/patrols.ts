@@ -1,5 +1,7 @@
 import { apiFetch, ApiResponse } from './client';
-import { PatrolLog, GPSCoordinate, AssignedPatrol } from '../../types/patrol';
+import { PatrolLog, GPSCoordinate, AssignedPatrol, ActivePatrolSession, RangerStatus, ActualPathPoint } from '../../types/patrol';
+import { storageService } from '../../storage/asyncStorage';
+import { STORAGE_KEYS } from '../../storage/keys';
 
 export const MOCK_ASSIGNED_PATROLS: AssignedPatrol[] = [
   {
@@ -52,10 +54,10 @@ export const MOCK_ASSIGNED_PATROLS: AssignedPatrol[] = [
   },
 ];
 
+let inMemoryAssignedPatrols = [...MOCK_ASSIGNED_PATROLS];
+
 export const patrolApiService = {
   async getRangerAssignedPatrols(rangerId: string = 'R001'): Promise<ApiResponse<AssignedPatrol[]>> {
-    // API endpoint: GET /api/rangers/:rangerId/patrols
-    // Currently using mock data until manager assignment backend API is integrated
     try {
       const response = await apiFetch<AssignedPatrol[]>(`/rangers/${rangerId}/patrols`);
       if (response.data && response.data.length > 0) {
@@ -65,10 +67,75 @@ export const patrolApiService = {
       // Fall back to mock data
     }
     return {
-      data: MOCK_ASSIGNED_PATROLS,
+      data: inMemoryAssignedPatrols,
       error: null,
       status: 200,
     };
+  },
+
+  async startPatrolSession(patrol: AssignedPatrol): Promise<ActivePatrolSession> {
+    const now = new Date();
+    const formattedStartTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    // 1. Update patrol status: ASSIGNED -> IN_PROGRESS
+    inMemoryAssignedPatrols = inMemoryAssignedPatrols.map((item) =>
+      item.id === patrol.id ? { ...item, status: 'IN_PROGRESS' as const } : item
+    );
+
+    const initialPoint: ActualPathPoint = {
+      latitude: patrol.route[0] ? patrol.route[0][1] : 6.3672,
+      longitude: patrol.route[0] ? patrol.route[0][0] : 81.503,
+      timestamp: formattedStartTime,
+    };
+
+    // 2. Create Active Patrol Session (Ranger Status: ON_PATROL) with initial actualPath point
+    const session: ActivePatrolSession = {
+      sessionId: `SESS-${Date.now()}`,
+      patrolId: patrol.id,
+      patrolName: patrol.name,
+      park: patrol.park,
+      priority: patrol.priority,
+      patrolStatus: 'IN_PROGRESS',
+      rangerStatus: 'ON_PATROL',
+      startTime: formattedStartTime,
+      startTimestamp: now.getTime(),
+      routeCoords: patrol.route,
+      pointCount: 1,
+      actualPath: [initialPoint],
+    };
+
+    await storageService.setItem(STORAGE_KEYS.ACTIVE_PATROL, session);
+    return session;
+  },
+
+  async addActualPathPoint(point: ActualPathPoint): Promise<ActivePatrolSession | null> {
+    const session = await storageService.getItem<ActivePatrolSession>(STORAGE_KEYS.ACTIVE_PATROL);
+    if (!session) return null;
+
+    const updatedPath = [...(session.actualPath || []), point];
+    const updatedSession: ActivePatrolSession = {
+      ...session,
+      actualPath: updatedPath,
+      pointCount: updatedPath.length,
+    };
+
+    await storageService.setItem(STORAGE_KEYS.ACTIVE_PATROL, updatedSession);
+    return updatedSession;
+  },
+
+  async getActivePatrolSession(): Promise<ActivePatrolSession | null> {
+    return storageService.getItem<ActivePatrolSession>(STORAGE_KEYS.ACTIVE_PATROL);
+  },
+
+  async endPatrolSession(patrolId: string): Promise<RangerStatus> {
+    // 1. Update patrol status: IN_PROGRESS -> COMPLETED
+    inMemoryAssignedPatrols = inMemoryAssignedPatrols.map((item) =>
+      item.id === patrolId ? { ...item, status: 'COMPLETED' as const } : item
+    );
+
+    // 2. Clear Active Patrol Session & Return Ranger Status to AVAILABLE
+    await storageService.removeItem(STORAGE_KEYS.ACTIVE_PATROL);
+    return 'AVAILABLE';
   },
 
   async startPatrol(rangerId: string): Promise<ApiResponse<PatrolLog>> {
@@ -95,4 +162,5 @@ export const patrolApiService = {
     });
   },
 };
+
 

@@ -1,5 +1,3 @@
-import { LocationData } from './incident';
-
 export type PatrolStatus = 'active' | 'paused' | 'completed' | 'cancelled';
 
 export interface GPSCoordinate {
@@ -40,6 +38,8 @@ export interface ScheduledPatrol {
 
 export type ScheduledPatrolInput = Omit<ScheduledPatrol, 'id' | 'createdAt' | 'updatedAt'>;
 
+export type RangerStatus = 'AVAILABLE' | 'ON_PATROL' | 'OFF_DUTY';
+
 export interface AssignedPatrol {
   id: string;
   name: string;
@@ -52,4 +52,26 @@ export interface AssignedPatrol {
   instructions: string;
   route: [number, number][]; // Array of [longitude, latitude] tuples
 }
+
+export interface ActualPathPoint {
+  latitude: number;
+  longitude: number;
+  timestamp: string; // e.g. "08:02"
+}
+
+export interface ActivePatrolSession {
+  sessionId: string;
+  patrolId: string;
+  patrolName: string;
+  park: string;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  patrolStatus: 'IN_PROGRESS' | 'COMPLETED';
+  rangerStatus: RangerStatus;
+  startTime: string;
+  startTimestamp: number;
+  routeCoords: [number, number][];
+  pointCount: number;
+  actualPath: ActualPathPoint[];
+}
+
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,11 @@ import {
   Platform,
   Modal,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
 
-import { AssignedPatrol } from '../../types/patrol';
+import { AssignedPatrol, RangerStatus } from '../../types/patrol';
 import { patrolApiService, MOCK_ASSIGNED_PATROLS } from '../../services/api/patrols';
 
 const ELEPHANT_E014_IMG =
@@ -76,26 +76,52 @@ export default function DashboardScreen() {
   const [assignedPatrols, setAssignedPatrols] = useState<AssignedPatrol[]>(MOCK_ASSIGNED_PATROLS);
   const [showAllPatrols, setShowAllPatrols] = useState(false);
   const [selectedPatrol, setSelectedPatrol] = useState<AssignedPatrol | null>(null);
+  const [rangerStatus, setRangerStatus] = useState<RangerStatus>('AVAILABLE');
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchPatrols = async () => {
-      try {
-        const response = await patrolApiService.getRangerAssignedPatrols('R001');
-        if (isMounted && response.data && response.data.length > 0) {
-          setAssignedPatrols(response.data);
-        }
-      } catch {
-        // Fall back to MOCK_ASSIGNED_PATROLS
+  const fetchPatrols = async () => {
+    try {
+      const activeSession = await patrolApiService.getActivePatrolSession();
+      if (activeSession) {
+        setRangerStatus(activeSession.rangerStatus);
+      } else {
+        setRangerStatus('AVAILABLE');
       }
-    };
-    fetchPatrols();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+
+      const response = await patrolApiService.getRangerAssignedPatrols('R001');
+      if (response.data && response.data.length > 0) {
+        setAssignedPatrols(response.data);
+      }
+    } catch {
+      // Fall back to MOCK_ASSIGNED_PATROLS
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchPatrols();
+    }, [])
+  );
 
   const visiblePatrols = showAllPatrols ? assignedPatrols : assignedPatrols.slice(0, 1);
+
+  const handleStartPatrol = async (patrol: AssignedPatrol) => {
+    const session = await patrolApiService.startPatrolSession(patrol);
+    setRangerStatus('ON_PATROL');
+    setSelectedPatrol(null);
+
+    router.push({
+      pathname: '/patrol',
+      params: {
+        sessionId: session.sessionId,
+        patrolId: session.patrolId,
+        patrolName: session.patrolName,
+        park: session.park,
+        priority: session.priority,
+        startTime: session.startTime,
+        routeCoords: JSON.stringify(session.routeCoords),
+      },
+    });
+  };
 
   const handleBroadcastAlert = () => {
     Alert.alert(
@@ -147,7 +173,27 @@ export default function DashboardScreen() {
             style={styles.rangerAvatar}
           />
           <View style={styles.rangerProfileInfo}>
-            <Text style={styles.rangerProfileLabel}>ON-DUTY RANGER</Text>
+            <View style={styles.rangerLabelRow}>
+              <Text style={styles.rangerProfileLabel}>ON-DUTY RANGER</Text>
+              <View
+                style={[
+                  styles.rangerStatusPill,
+                  rangerStatus === 'ON_PATROL'
+                    ? styles.rangerStatusOnPatrol
+                    : styles.rangerStatusAvailable,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.rangerStatusDot,
+                    rangerStatus === 'ON_PATROL'
+                      ? styles.rangerDotOnPatrol
+                      : styles.rangerDotAvailable,
+                  ]}
+                />
+                <Text style={styles.rangerStatusText}>{rangerStatus}</Text>
+              </View>
+            </View>
             <Text style={styles.rangerProfileName}>Ranger Nimal</Text>
           </View>
         </View>
@@ -516,18 +562,7 @@ export default function DashboardScreen() {
                 style={styles.startPatrolModalBtn}
                 onPress={() => {
                   if (selectedPatrol) {
-                    const targetPatrol = selectedPatrol;
-                    setSelectedPatrol(null);
-                    router.push({
-                      pathname: '/patrol',
-                      params: {
-                        patrolId: targetPatrol.id,
-                        patrolName: targetPatrol.name,
-                        park: targetPatrol.park,
-                        priority: targetPatrol.priority,
-                        routeCoords: JSON.stringify(targetPatrol.route),
-                      },
-                    });
+                    handleStartPatrol(selectedPatrol);
                   }
                 }}
                 activeOpacity={0.85}
@@ -639,13 +674,53 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   rangerProfileInfo: {
+    flex: 1,
     justifyContent: 'center',
+  },
+  rangerLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   rangerProfileLabel: {
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.8,
     color: '#8EA69A',
+  },
+  rangerStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+  },
+  rangerStatusAvailable: {
+    backgroundColor: 'rgba(74, 222, 128, 0.15)',
+    borderColor: '#4ADE80',
+  },
+  rangerStatusOnPatrol: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: '#F59E0B',
+  },
+  rangerStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  rangerDotAvailable: {
+    backgroundColor: '#4ADE80',
+  },
+  rangerDotOnPatrol: {
+    backgroundColor: '#F59E0B',
+  },
+  rangerStatusText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   rangerProfileName: {
     fontSize: 20,
