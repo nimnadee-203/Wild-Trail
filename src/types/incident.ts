@@ -28,6 +28,8 @@ export interface LocationData {
 export interface IncidentReport {
   id: string;
   reporterId: string;
+  reporterName?: string;
+  reporterBadgeNumber?: string;
   category: IncidentCategory;
   severity: IncidentSeverity;
   status: IncidentStatus;

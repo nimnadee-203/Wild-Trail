@@ -11,6 +11,11 @@ export const USER_ROLES: Record<UserRole, { key: UserRole; title: string; descri
     title: 'Community Reporter',
     description: 'Human-wildlife conflict reporting and local safety updates.',
   },
+  manager: {
+    key: 'manager',
+    title: 'Park Manager',
+    description: 'Park-wide incident oversight, investigation, and reporting.',
+  },
   admin: {
     key: 'admin',
     title: 'System Administrator',
