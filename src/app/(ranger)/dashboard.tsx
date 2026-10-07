@@ -1,3 +1,4 @@
+import { WildTrailBrand } from '../../components/WildTrailBrand';
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -161,13 +162,7 @@ export default function DashboardScreen() {
       {/* Top Application Header (Dark WildGuard Header) */}
       <View style={styles.darkHeader}>
         <View style={styles.darkHeaderLeft}>
-          <View style={styles.shieldIconWrap}>
-            <Ionicons name="shield-checkmark" size={20} color="#4ADE80" />
-          </View>
-          <View>
-            <Text style={styles.darkHeaderTitle}>WILDGUARD</Text>
-            <Text style={styles.darkHeaderSubtitle}>Yala NP Anti-Poaching System</Text>
-          </View>
+          <WildTrailBrand light title="Ranger Operations" />
         </View>
 
         <TouchableOpacity style={styles.syncedPillBtn} activeOpacity={0.8}>
