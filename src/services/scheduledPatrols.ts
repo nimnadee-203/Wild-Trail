@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   orderBy,
@@ -41,18 +42,59 @@ export function getScheduledPatrolErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Unable to save the patrol. Please try again.';
 }
 
+function mapPoints(value: unknown): ScheduledPatrol['route'] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((point) => ({
+      latitude: Number(point?.latitude),
+      longitude: Number(point?.longitude),
+    }))
+    .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
+}
+
+function mapCheckpoints(value: unknown): ScheduledPatrol['checkpoints'] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((point, index) => ({
+      id: String(point?.id ?? `cp-${index + 1}`),
+      label: String(point?.label ?? `Checkpoint ${index + 1}`),
+      latitude: Number(point?.latitude),
+      longitude: Number(point?.longitude),
+    }))
+    .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
+}
+
+function toFirestorePayload(input: ScheduledPatrolInput) {
+  return {
+    teamName: input.teamName.trim(),
+    rangerName: input.rangerName.trim(),
+    rangerId: input.rangerId?.trim() || null,
+    zone: input.zone.trim(),
+    date: input.date,
+    startTime: input.startTime,
+    endTime: input.endTime?.trim() || null,
+    notes: input.notes?.trim() || null,
+    status: input.status,
+    route: input.route ?? [],
+    checkpoints: input.checkpoints ?? [],
+  };
+}
+
 function mapScheduledPatrol(document: DocumentData & { id: string }): ScheduledPatrol {
   const data = document as DocumentData;
   return {
     id: document.id,
     teamName: String(data.teamName ?? ''),
     rangerName: String(data.rangerName ?? ''),
+    rangerId: data.rangerId ? String(data.rangerId) : undefined,
     zone: String(data.zone ?? ''),
     date: String(data.date ?? ''),
     startTime: String(data.startTime ?? ''),
     endTime: data.endTime ? String(data.endTime) : undefined,
     notes: data.notes ? String(data.notes) : undefined,
     status: data.status ?? 'scheduled',
+    route: mapPoints(data.route),
+    checkpoints: mapCheckpoints(data.checkpoints),
     createdAt: data.createdAt?.toDate?.()?.toISOString(),
     updatedAt: data.updatedAt?.toDate?.()?.toISOString(),
   };
@@ -72,7 +114,7 @@ export function subscribeToScheduledPatrols(
 
 export async function createScheduledPatrol(input: ScheduledPatrolInput): Promise<string> {
   const document = await withFirestoreTimeout(addDoc(scheduledPatrolsCollection, {
-    ...input,
+    ...toFirestorePayload(input),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }));
@@ -81,7 +123,11 @@ export async function createScheduledPatrol(input: ScheduledPatrolInput): Promis
 
 export async function updateScheduledPatrol(id: string, input: ScheduledPatrolInput): Promise<void> {
   await withFirestoreTimeout(updateDoc(doc(db, 'assignedPatrols', id), {
-    ...input,
+    ...toFirestorePayload(input),
     updatedAt: serverTimestamp(),
   }));
+}
+
+export async function deleteScheduledPatrol(id: string): Promise<void> {
+  await withFirestoreTimeout(deleteDoc(doc(db, 'assignedPatrols', id)));
 }
