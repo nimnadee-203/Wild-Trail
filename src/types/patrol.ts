@@ -39,3 +39,17 @@ export interface ScheduledPatrol {
 }
 
 export type ScheduledPatrolInput = Omit<ScheduledPatrol, 'id' | 'createdAt' | 'updatedAt'>;
+
+export interface AssignedPatrol {
+  id: string;
+  name: string;
+  park: string;
+  date: string;
+  startTime: string;
+  duration: number; // in hours
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  status: 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  instructions: string;
+  route: [number, number][]; // Array of [longitude, latitude] tuples
+}
+

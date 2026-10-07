@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,57 +16,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
 
-export interface AssignedPatrolItem {
-  id: string;
-  nationalPark: string;
-  route: string;
-  scheduleWindow: string;
-  date: string;
-  teamName: string;
-  rangerName: string;
-  status: 'ACTIVE' | 'SCHEDULED' | 'COMPLETED';
-  sector: string;
-  notes: string;
-}
-
-const ASSIGNED_PATROLS_DATA: AssignedPatrolItem[] = [
-  {
-    id: 'patrol-101',
-    nationalPark: 'Yala National Park',
-    route: 'Block 1 – Wildlife Trail',
-    scheduleWindow: '08:00 AM - 12:00 PM',
-    date: 'Today',
-    teamName: 'Alpha Squad',
-    rangerName: 'Ranger Nimal',
-    status: 'ACTIVE',
-    sector: 'Sector 1 (Southern Boundary)',
-    notes: 'Primary anti-poaching foot patrol. Inspect snare traps and track Elephant E-014 buffer movement.',
-  },
-  {
-    id: 'patrol-102',
-    nationalPark: 'Yala National Park',
-    route: 'Block 3 – River Bank Corridor',
-    scheduleWindow: '02:00 PM - 06:00 PM',
-    date: 'Today',
-    teamName: 'Bravo Recon',
-    rangerName: 'Ranger Nimal',
-    status: 'SCHEDULED',
-    sector: 'Sector 3 (River Corridor)',
-    notes: 'Monitor waterholes for illegal night camping & poaching activities.',
-  },
-  {
-    id: 'patrol-103',
-    nationalPark: 'Yala National Park',
-    route: 'Block 5 – Coastal Dune Sector',
-    scheduleWindow: '06:00 AM - 10:00 AM',
-    date: 'Tomorrow',
-    teamName: 'Delta Patrol',
-    rangerName: 'Ranger Nimal',
-    status: 'SCHEDULED',
-    sector: 'Sector 5 (Coastal Perimeter)',
-    notes: 'Boundary fence inspection & GPS camera trap maintenance.',
-  },
-];
+import { AssignedPatrol } from '../../types/patrol';
+import { patrolApiService, MOCK_ASSIGNED_PATROLS } from '../../services/api/patrols';
 
 const ELEPHANT_E014_IMG =
   'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Asian_elephant_-_melbourne_zoo.jpg/320px-Asian_elephant_-_melbourne_zoo.jpg';
@@ -122,12 +73,29 @@ const RECENT_ALERTS: AlertItem[] = [
 export default function DashboardScreen() {
   const router = useRouter();
   const [broadcastSent, setBroadcastSent] = useState(false);
+  const [assignedPatrols, setAssignedPatrols] = useState<AssignedPatrol[]>(MOCK_ASSIGNED_PATROLS);
   const [showAllPatrols, setShowAllPatrols] = useState(false);
-  const [selectedPatrol, setSelectedPatrol] = useState<AssignedPatrolItem | null>(null);
+  const [selectedPatrol, setSelectedPatrol] = useState<AssignedPatrol | null>(null);
 
-  const visiblePatrols = showAllPatrols
-    ? ASSIGNED_PATROLS_DATA
-    : ASSIGNED_PATROLS_DATA.slice(0, 1);
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPatrols = async () => {
+      try {
+        const response = await patrolApiService.getRangerAssignedPatrols('R001');
+        if (isMounted && response.data && response.data.length > 0) {
+          setAssignedPatrols(response.data);
+        }
+      } catch {
+        // Fall back to MOCK_ASSIGNED_PATROLS
+      }
+    };
+    fetchPatrols();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const visiblePatrols = showAllPatrols ? assignedPatrols : assignedPatrols.slice(0, 1);
 
   const handleBroadcastAlert = () => {
     Alert.alert(
@@ -190,17 +158,19 @@ export default function DashboardScreen() {
             <View style={styles.assignedPatrolHeader}>
               <View style={styles.badgeAndStatusRow}>
                 <View style={styles.assignedPatrolBadge}>
-                  <Text style={styles.assignedPatrolBadgeText}>ASSIGNED PATROL</Text>
+                  <Text style={styles.assignedPatrolBadgeText}>{patrol.id}</Text>
                 </View>
                 <View
                   style={[
-                    styles.statusTag,
-                    patrol.status === 'ACTIVE'
-                      ? styles.statusTagActive
-                      : styles.statusTagScheduled,
+                    styles.priorityTag,
+                    patrol.priority === 'HIGH'
+                      ? styles.priorityTagHigh
+                      : patrol.priority === 'MEDIUM'
+                      ? styles.priorityTagMedium
+                      : styles.priorityTagLow,
                   ]}
                 >
-                  <Text style={styles.statusTagText}>{patrol.status}</Text>
+                  <Text style={styles.priorityTagText}>{patrol.priority} PRIORITY</Text>
                 </View>
               </View>
 
@@ -216,26 +186,28 @@ export default function DashboardScreen() {
 
             <View style={styles.patrolFieldGroup}>
               <Text style={styles.patrolFieldLabel}>NATIONAL PARK</Text>
-              <Text style={styles.patrolFieldValueMain}>{patrol.nationalPark}</Text>
+              <Text style={styles.patrolFieldValueMain}>{patrol.park}</Text>
             </View>
 
             <View style={styles.patrolFieldGroup}>
               <Text style={styles.patrolFieldLabel}>ACTIVE SECTOR ROUTE</Text>
-              <Text style={styles.patrolFieldValueSub}>{patrol.route}</Text>
+              <Text style={styles.patrolFieldValueSub}>{patrol.name}</Text>
             </View>
 
             <View style={styles.patrolFieldGroup}>
               <Text style={styles.patrolFieldLabel}>SCHEDULE WINDOW</Text>
               <View style={styles.scheduleRow}>
                 <Ionicons name="time-outline" size={18} color="#FFFFFF" />
-                <Text style={styles.scheduleText}>{patrol.scheduleWindow}</Text>
+                <Text style={styles.scheduleText}>
+                  {patrol.startTime} ({patrol.duration} hrs) • {patrol.date}
+                </Text>
               </View>
             </View>
           </View>
         ))}
 
         {/* Show All Assigned Patrols Toggle Button */}
-        {ASSIGNED_PATROLS_DATA.length > 1 && (
+        {assignedPatrols.length > 1 && (
           <TouchableOpacity
             style={styles.showAllPatrolsBtn}
             onPress={() => setShowAllPatrols(!showAllPatrols)}
@@ -244,7 +216,7 @@ export default function DashboardScreen() {
             <Text style={styles.showAllPatrolsText}>
               {showAllPatrols
                 ? 'Hide Additional Patrols'
-                : `Show All Assigned Patrols (${ASSIGNED_PATROLS_DATA.length})`}
+                : `Show All Assigned Patrols (${assignedPatrols.length})`}
             </Text>
             <Ionicons
               name={showAllPatrols ? 'chevron-up' : 'chevron-down'}
@@ -435,46 +407,106 @@ export default function DashboardScreen() {
             {selectedPatrol && (
               <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
                 <View style={styles.modalStatusRow}>
-                  <Text style={styles.modalRouteTitle}>{selectedPatrol.route}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalRouteTitle}>{selectedPatrol.name}</Text>
+                    <Text style={styles.modalPatrolIdText}>{selectedPatrol.id}</Text>
+                  </View>
                   <View
                     style={[
-                      styles.statusTag,
-                      selectedPatrol.status === 'ACTIVE'
-                        ? styles.statusTagActive
-                        : styles.statusTagScheduled,
+                      styles.priorityTag,
+                      selectedPatrol.priority === 'HIGH'
+                        ? styles.priorityTagHigh
+                        : selectedPatrol.priority === 'MEDIUM'
+                        ? styles.priorityTagMedium
+                        : styles.priorityTagLow,
                     ]}
                   >
-                    <Text style={styles.statusTagText}>{selectedPatrol.status}</Text>
+                    <Text style={styles.priorityTagText}>{selectedPatrol.priority} PRIORITY</Text>
                   </View>
                 </View>
 
                 <View style={styles.modalDetailGroup}>
                   <Text style={styles.modalDetailLabel}>NATIONAL PARK</Text>
-                  <Text style={styles.modalDetailValue}>{selectedPatrol.nationalPark}</Text>
+                  <Text style={styles.modalDetailValue}>{selectedPatrol.park}</Text>
                 </View>
 
                 <View style={styles.modalDetailGroup}>
-                  <Text style={styles.modalDetailLabel}>SECTOR / ZONE</Text>
-                  <Text style={styles.modalDetailValue}>{selectedPatrol.sector}</Text>
-                </View>
-
-                <View style={styles.modalDetailGroup}>
-                  <Text style={styles.modalDetailLabel}>SCHEDULE WINDOW</Text>
+                  <Text style={styles.modalDetailLabel}>SCHEDULE & DURATION</Text>
                   <Text style={styles.modalDetailValue}>
-                    {selectedPatrol.scheduleWindow} ({selectedPatrol.date})
+                    Date: {selectedPatrol.date} • Start Time: {selectedPatrol.startTime} ({selectedPatrol.duration} hours)
                   </Text>
                 </View>
 
                 <View style={styles.modalDetailGroup}>
-                  <Text style={styles.modalDetailLabel}>ASSIGNED TEAM & RANGER</Text>
-                  <Text style={styles.modalDetailValue}>
-                    {selectedPatrol.teamName} • {selectedPatrol.rangerName}
-                  </Text>
+                  <Text style={styles.modalDetailLabel}>PATROL STATUS</Text>
+                  <Text style={styles.modalDetailValue}>{selectedPatrol.status}</Text>
+                </View>
+
+                {/* Mapbox Route Preview Card */}
+                <View style={styles.mapboxMapContainer}>
+                  <View style={styles.mapboxHeaderRow}>
+                    <View style={styles.mapboxTag}>
+                      <Ionicons name="map-outline" size={13} color="#4ADE80" />
+                      <Text style={styles.mapboxTagText}>MAPBOX ASSIGNED ROUTE</Text>
+                    </View>
+                    <Text style={styles.mapboxDistText}>
+                      {selectedPatrol.route.length} Waypoints • Est. ~4.8 km
+                    </Text>
+                  </View>
+
+                  <View style={styles.mapboxCanvas}>
+                    {/* Grid/Terrain Overlay */}
+                    <View style={styles.mapTerrainGrid} />
+
+                    {/* Polyline Route Connections */}
+                    <View style={styles.routePolylineSegment1} />
+                    <View style={styles.routePolylineSegment2} />
+
+                    {/* Start Waypoint Pin */}
+                    <View style={[styles.mapMarkerPin, { top: '65%', left: '18%' }]}>
+                      <View style={styles.startMarkerCircle}>
+                        <Text style={styles.markerText}>START</Text>
+                      </View>
+                      <Text style={styles.markerCoordSub}>
+                        {selectedPatrol.route[0]
+                          ? `${selectedPatrol.route[0][1].toFixed(3)}°, ${selectedPatrol.route[0][0].toFixed(3)}°`
+                          : ''}
+                      </Text>
+                    </View>
+
+                    {/* Mid Waypoint Pin */}
+                    {selectedPatrol.route.length > 1 && (
+                      <View style={[styles.mapMarkerPin, { top: '42%', left: '50%' }]}>
+                        <View style={styles.midMarkerCircle}>
+                          <Ionicons name="location" size={12} color="#FFFFFF" />
+                        </View>
+                      </View>
+                    )}
+
+                    {/* End Waypoint Pin */}
+                    {selectedPatrol.route.length > 2 && (
+                      <View style={[styles.mapMarkerPin, { top: '20%', left: '78%' }]}>
+                        <View style={styles.endMarkerCircle}>
+                          <Text style={styles.markerText}>END</Text>
+                        </View>
+                        <Text style={styles.markerCoordSub}>
+                          {selectedPatrol.route[selectedPatrol.route.length - 1][1].toFixed(3)}°,{' '}
+                          {selectedPatrol.route[selectedPatrol.route.length - 1][0].toFixed(3)}°
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
 
                 <View style={styles.modalDetailGroup}>
-                  <Text style={styles.modalDetailLabel}>FIELD INSTRUCTIONS & NOTES</Text>
-                  <Text style={styles.modalNotesValue}>{selectedPatrol.notes}</Text>
+                  <Text style={styles.modalDetailLabel}>
+                    PLANNED ROUTE WAYPOINTS ({selectedPatrol.route.length})
+                  </Text>
+                  {selectedPatrol.route.map((coord, idx) => (
+                    <Text key={idx} style={styles.modalRouteCoordText}>
+                      📍 Waypoint {idx + 1}: {coord[1].toFixed(4)}° N, {coord[0].toFixed(4)}° E
+                    </Text>
+                  ))}
                 </View>
               </ScrollView>
             )}
@@ -483,13 +515,25 @@ export default function DashboardScreen() {
               <TouchableOpacity
                 style={styles.startPatrolModalBtn}
                 onPress={() => {
-                  setSelectedPatrol(null);
-                  router.push('/patrol');
+                  if (selectedPatrol) {
+                    const targetPatrol = selectedPatrol;
+                    setSelectedPatrol(null);
+                    router.push({
+                      pathname: '/patrol',
+                      params: {
+                        patrolId: targetPatrol.id,
+                        patrolName: targetPatrol.name,
+                        park: targetPatrol.park,
+                        priority: targetPatrol.priority,
+                        routeCoords: JSON.stringify(targetPatrol.route),
+                      },
+                    });
+                  }
                 }}
                 activeOpacity={0.85}
               >
                 <Ionicons name="footsteps" size={18} color="#FFFFFF" />
-                <Text style={styles.startPatrolModalBtnText}>Start This Patrol</Text>
+                <Text style={styles.startPatrolModalBtnText}>Start Patrol</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -644,22 +688,27 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     color: '#A7F3D0',
   },
-  statusTag: {
+  priorityTag: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
-  statusTagActive: {
+  priorityTagHigh: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  priorityTagMedium: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  priorityTagLow: {
     backgroundColor: 'rgba(74, 222, 128, 0.2)',
     borderWidth: 1,
     borderColor: '#4ADE80',
   },
-  statusTagScheduled: {
-    backgroundColor: 'rgba(217, 119, 6, 0.2)',
-    borderWidth: 1,
-    borderColor: '#F59E0B',
-  },
-  statusTagText: {
+  priorityTagText: {
     fontSize: 10,
     fontWeight: '800',
     color: '#FFFFFF',
@@ -795,8 +844,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: '#FFFFFF',
-    flex: 1,
-    marginRight: 10,
+  },
+  modalPatrolIdText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4ADE80',
+    marginTop: 2,
   },
   modalDetailGroup: {
     marginBottom: 12,
@@ -823,6 +876,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#223B2E',
+  },
+  modalRouteCoordText: {
+    fontSize: 13,
+    color: '#A7F3D0',
+    marginTop: 4,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   modalFooter: {
     gap: 10,
