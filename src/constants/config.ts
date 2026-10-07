@@ -4,8 +4,9 @@ export const APP_CONFIG = {
   apiBaseUrl: process.env.EXPO_PUBLIC_API_URL || 'https://api.wildlifeguard.org/v1',
   gpsLocationIntervalMs: 10000, // Update GPS every 10s during patrol
   syncIntervalMinutes: 15,
+  mapboxAccessToken: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '',
   defaultCoordinates: {
-    latitude: -1.286389,
-    longitude: 36.817223,
+    latitude: 6.852,
+    longitude: 80.926,
   },
 };

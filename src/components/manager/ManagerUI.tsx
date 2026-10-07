@@ -9,7 +9,7 @@ export function StatCard({ icon, label, value, change, tone = '#2B8263' }: { ico
 
 export function StatusPill({ value }: { value: string }) {
   const lower = value.toLowerCase();
-  const color = lower.includes('high') || lower.includes('active') ? '#D35F50' : lower.includes('medium') || lower.includes('investig') || lower.includes('break') || lower.includes('review') ? '#C98A2E' : '#2B8263';
+  const color = lower.includes('high') || lower.includes('active') || lower.includes('unassigned') ? '#D35F50' : lower.includes('medium') || lower.includes('investig') || lower.includes('break') || lower.includes('review') ? '#C98A2E' : '#2B8263';
   return <View style={[styles.pill, { backgroundColor: `${color}18` }]}><View style={[styles.pillDot, { backgroundColor: color }]} /><Text style={[styles.pillText, { color }]}>{value}</Text></View>;
 }
 

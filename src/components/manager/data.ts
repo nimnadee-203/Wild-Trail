@@ -28,6 +28,25 @@ export const patrols = [
   { name: 'Delta Team', ranger: 'Grace Wanjiku', zone: 'South Camp', status: 'Completed', progress: 100, last: 'Completed at 11:42 AM' },
 ];
 
+export type MockRangerStatus = 'available' | 'on patrol' | 'off duty';
+
+export type MockRanger = {
+  id: string;
+  name: string;
+  badge: string;
+  zone: string;
+  status: MockRangerStatus;
+};
+
+export const mockRangers: MockRanger[] = [
+  { id: 'ranger-204', name: 'James Mwangi', badge: 'RG-204', zone: 'North Ridge', status: 'available' },
+  { id: 'ranger-211', name: 'Amina Hassan', badge: 'RG-211', zone: 'River Gate', status: 'available' },
+  { id: 'ranger-218', name: 'Peter Otieno', badge: 'RG-218', zone: 'East Boundary', status: 'on patrol' },
+  { id: 'ranger-223', name: 'Grace Wanjiku', badge: 'RG-223', zone: 'South Camp', status: 'available' },
+  { id: 'ranger-230', name: 'Daniel Kariuki', badge: 'RG-230', zone: 'West Valley', status: 'off duty' },
+  { id: 'ranger-236', name: 'Lydia Chebet', badge: 'RG-236', zone: 'Marsh Flats', status: 'available' },
+];
+
 export const incidents = [
   { id: 'INC-2408', type: 'Human-wildlife conflict', reporter: 'M. Kilonzo', location: 'Maji Moto village', date: 'Today, 10:24 AM', status: 'Investigating', priority: 'High' },
   { id: 'INC-2407', type: 'Illegal activity', reporter: 'Ranger report', location: 'North Ridge', date: 'Yesterday, 4:15 PM', status: 'In progress', priority: 'High' },
