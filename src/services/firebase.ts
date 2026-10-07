@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
@@ -12,8 +12,10 @@ const firebaseConfig = {
   appId: "1:949588157701:web:40574d61373a31b72f436c",
 };
 
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase safely (prevents duplicate app error during Fast Refresh)
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+export { app };

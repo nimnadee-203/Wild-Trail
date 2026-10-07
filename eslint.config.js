@@ -1,8 +1,8 @@
-const expo = require('eslint-config-expo');
+const expo = require('eslint-config-expo/flat');
 
 module.exports = [
+  ...expo,
   {
     ignores: ['node_modules/**', '.expo/**', 'dist/**', 'build/**'],
   },
-  ...(Array.isArray(expo) ? expo : [expo]),
 ];

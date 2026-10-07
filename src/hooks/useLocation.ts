@@ -39,7 +39,10 @@ export function useLocation() {
   };
 
   useEffect(() => {
-    requestAndFetchLocation();
+    const timer = setTimeout(() => {
+      requestAndFetchLocation();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   return {
