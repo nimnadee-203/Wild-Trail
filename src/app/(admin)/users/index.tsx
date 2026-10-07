@@ -16,11 +16,18 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../../constants/colors';
 import { userService } from '../../../services/api/users';
 import { StaffUser, RangerProfileDoc, UserRole, AccountStatus } from '../../../types/user';
+import { storageService } from '../../../storage/asyncStorage';
+import { STORAGE_KEYS } from '../../../storage/keys';
 
 export default function AdminUsersScreen() {
   const router = useRouter();
   const [staffList, setStaffList] = useState<StaffUser[]>([]);
   const [filterRole, setFilterRole] = useState<'ALL' | UserRole>('ALL');
+
+  const handleLogout = async () => {
+    await storageService.removeItem(STORAGE_KEYS.USER_PROFILE);
+    router.replace('/(auth)/login');
+  };
 
   // Edit Park/Zone Modal State
   const [editUser, setEditUser] = useState<StaffUser | null>(null);
@@ -116,7 +123,7 @@ export default function AdminUsersScreen() {
       {/* Top Header Navigation Bar */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.push('/(auth)/login')} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.backBtn} onPress={handleLogout} activeOpacity={0.7}>
             <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <View>

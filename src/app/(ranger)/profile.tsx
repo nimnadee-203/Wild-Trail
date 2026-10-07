@@ -13,6 +13,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
+import { storageService } from '../../storage/asyncStorage';
+import { STORAGE_KEYS } from '../../storage/keys';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -21,14 +23,25 @@ export default function ProfileScreen() {
   const [offlineMapCache, setOfflineMapCache] = useState(true);
 
   const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to end your patrol shift and log out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: () => router.replace('/login'),
-      },
-    ]);
+    const doLogout = async () => {
+      await storageService.removeItem(STORAGE_KEYS.USER_PROFILE);
+      router.replace('/(auth)/login');
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to end your patrol shift and log out?')) {
+        doLogout();
+      }
+    } else {
+      Alert.alert('Sign Out', 'Are you sure you want to end your patrol shift and log out?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: doLogout,
+        },
+      ]);
+    }
   };
 
   return (
