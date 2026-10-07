@@ -70,6 +70,7 @@ export interface ActualPathPoint {
   latitude: number;
   longitude: number;
   timestamp: string; // e.g. "08:02"
+  syncStatus?: 'PENDING_SYNC' | 'SUBMITTED';
 }
 
 export type WaypointType =
@@ -89,6 +90,7 @@ export interface MarkedWaypoint {
   timestampMs: number;
   type: WaypointType;
   notes?: string;
+  syncStatus?: 'PENDING_SYNC' | 'SUBMITTED';
 }
 
 export type ObservationType =
@@ -109,6 +111,7 @@ export interface PatrolObservation {
   timestamp: string;
   type: ObservationType;
   description: string;
+  syncStatus?: 'PENDING_SYNC' | 'SUBMITTED';
 }
 
 export interface ActivePatrolSession {

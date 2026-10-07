@@ -18,6 +18,7 @@ import { useLocation } from '../../hooks/useLocation';
 import { formatCoordinates } from '../../utils/formatting';
 import Colors from '../../constants/colors';
 import { patrolApiService } from '../../services/api/patrols';
+import { offlineSyncService, SyncItemStatus } from '../../services/api/offlineSync';
 import {
   ActualPathPoint,
   MarkedWaypoint,
@@ -116,6 +117,55 @@ export default function PatrolScreen() {
   const [summaryModalVisible, setSummaryModalVisible] = useState(false);
   const [completedSummary, setCompletedSummary] = useState<CompletedPatrolSummary | null>(null);
 
+  // Offline & Network Sync State
+  const [isOnlineState, setIsOnlineState] = useState(true);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+
+  const refreshSyncQueue = async () => {
+    const queue = await offlineSyncService.getQueue();
+    const pending = queue.filter((item) => item.status === 'PENDING_SYNC').length;
+    setPendingSyncCount(pending);
+  };
+
+  useEffect(() => {
+    async function initNetworkState() {
+      const online = await offlineSyncService.isOnline();
+      setIsOnlineState(online);
+      await refreshSyncQueue();
+    }
+    initNetworkState();
+  }, []);
+
+  const handleToggleNetwork = async () => {
+    const nextState = !isOnlineState;
+    setIsOnlineState(nextState);
+    await offlineSyncService.setOnlineStatus(nextState);
+
+    if (nextState) {
+      // Internet returns -> Upload data -> SUBMITTED
+      const { syncedCount } = await offlineSyncService.syncPendingItems();
+      setMarkedWaypoints((prev) =>
+        prev.map((wp) => ({ ...wp, syncStatus: 'SUBMITTED' as const }))
+      );
+      setObservations((prev) =>
+        prev.map((obs) => ({ ...obs, syncStatus: 'SUBMITTED' as const }))
+      );
+      await refreshSyncQueue();
+
+      if (Platform.OS === 'web') {
+        window.alert(`Internet Connection Restored! Uploaded ${syncedCount} offline record(s) to remote server (Status: SUBMITTED).`);
+      } else {
+        Alert.alert('Internet Restored', `Uploaded ${syncedCount} offline record(s) to remote server (Status: SUBMITTED).`);
+      }
+    } else {
+      if (Platform.OS === 'web') {
+        window.alert('Internet Connection Lost! GPS tracking continues uninterrupted. All new waypoints & observations will save locally with status PENDING_SYNC.');
+      } else {
+        Alert.alert('Internet Lost', 'GPS tracking continues uninterrupted. Data will be saved locally with status PENDING_SYNC.');
+      }
+    }
+  };
+
   // Initialize actualPath with default starting coordinate point
   const [actualPath, setActualPath] = useState<ActualPathPoint[]>([
     {
@@ -167,6 +217,7 @@ export default function PatrolScreen() {
             latitude: parseFloat((baseLat + stepOffsetLat).toFixed(4)),
             longitude: parseFloat((baseLng + stepOffsetLng).toFixed(4)),
             timestamp: timestampStr,
+            syncStatus: isOnlineState ? 'SUBMITTED' : 'PENDING_SYNC',
           };
 
           // Save point asynchronously to persistent session storage
@@ -180,7 +231,7 @@ export default function PatrolScreen() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isPatrolling, location]);
+  }, [isPatrolling, location, isOnlineState]);
 
   const togglePatrol = async () => {
     if (isPatrolling) {
@@ -208,6 +259,11 @@ export default function PatrolScreen() {
         }
       );
 
+      if (!isOnlineState) {
+        await offlineSyncService.queueItem('PATROL_SUMMARY', summary);
+        await refreshSyncQueue();
+      }
+
       setCompletedSummary(summary);
       setSummaryModalVisible(true);
     } else {
@@ -230,6 +286,8 @@ export default function PatrolScreen() {
     const currentLat = location?.latitude ?? actualPath[actualPath.length - 1]?.latitude ?? 6.3672;
     const currentLng = location?.longitude ?? actualPath[actualPath.length - 1]?.longitude ?? 81.503;
 
+    const syncStatus: SyncItemStatus = isOnlineState ? 'SUBMITTED' : 'PENDING_SYNC';
+
     const newWaypoint: MarkedWaypoint = {
       id: `WP-${Date.now()}`,
       latitude: parseFloat(currentLat.toFixed(4)),
@@ -238,15 +296,21 @@ export default function PatrolScreen() {
       timestampMs: now.getTime(),
       type: selectedCategory,
       notes: waypointNotes.trim() || undefined,
+      syncStatus,
     };
 
     await patrolApiService.addMarkedWaypoint(newWaypoint);
+    if (!isOnlineState) {
+      await offlineSyncService.queueItem('WAYPOINT', newWaypoint);
+      await refreshSyncQueue();
+    }
+
     setMarkedWaypoints((prev) => [...prev, newWaypoint]);
     setWaypointModalVisible(false);
 
     Alert.alert(
       'Waypoint Recorded',
-      `Marked ${selectedCategory.replace('_', ' ')} at (${newWaypoint.latitude}°, ${newWaypoint.longitude}°) at ${formattedTime}.`
+      `Marked ${selectedCategory.replace('_', ' ')} at (${newWaypoint.latitude}°, ${newWaypoint.longitude}°) [Status: ${syncStatus}].`
     );
   };
 
@@ -271,6 +335,8 @@ export default function PatrolScreen() {
     const currentLat = location?.latitude ?? actualPath[actualPath.length - 1]?.latitude ?? 6.3672;
     const currentLng = location?.longitude ?? actualPath[actualPath.length - 1]?.longitude ?? 81.503;
 
+    const syncStatus: SyncItemStatus = isOnlineState ? 'SUBMITTED' : 'PENDING_SYNC';
+
     const newObservation: PatrolObservation = {
       id: `OBS-${Date.now()}`,
       patrolId: patrolId || 'PAT-0156',
@@ -281,15 +347,21 @@ export default function PatrolScreen() {
       timestamp: formattedTime,
       type: selectedObsType,
       description: obsDescription.trim(),
+      syncStatus,
     };
 
     await patrolApiService.addPatrolObservation(newObservation);
+    if (!isOnlineState) {
+      await offlineSyncService.queueItem('OBSERVATION', newObservation);
+      await refreshSyncQueue();
+    }
+
     setObservations((prev) => [...prev, newObservation]);
     setObsModalVisible(false);
 
     Alert.alert(
       'Observation Saved',
-      `Observation "${newObservation.type}" associated with patrol ${newObservation.patrolId} and current location (${newObservation.latitude}°, ${newObservation.longitude}°).`
+      `Observation "${newObservation.type}" recorded at current location [Status: ${syncStatus}].`
     );
   };
 
@@ -317,6 +389,42 @@ export default function PatrolScreen() {
           label={isPatrolling ? 'Patrol Active' : 'Standby'}
           variant={isPatrolling ? 'success' : 'info'}
         />
+      </View>
+
+      {/* Network Connectivity & Offline Sync Status Banner */}
+      <View style={[styles.netBanner, isOnlineState ? styles.netBannerOnline : styles.netBannerOffline]}>
+        <View style={styles.netBannerLeft}>
+          <Ionicons
+            name={isOnlineState ? 'wifi' : 'wifi-outline'}
+            size={18}
+            color={isOnlineState ? '#059669' : '#DC2626'}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.netBannerTitle, { color: isOnlineState ? '#059669' : '#DC2626' }]}>
+              {isOnlineState ? 'ONLINE • NETWORK CONNECTED' : 'INTERNET LOST • GPS CONTINUES'}
+            </Text>
+            <Text style={styles.netBannerSub}>
+              {isOnlineState
+                ? 'All breadcrumbs & records uploading live (SUBMITTED)'
+                : `GPS tracking active • Data saved locally (${pendingSyncCount} PENDING_SYNC)`}
+            </Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.netToggleBtn, isOnlineState ? styles.netBtnOffline : styles.netBtnOnline]}
+          onPress={handleToggleNetwork}
+          activeOpacity={0.85}
+        >
+          <Ionicons
+            name={isOnlineState ? 'cloud-offline' : 'cloud-upload'}
+            size={13}
+            color="#FFFFFF"
+          />
+          <Text style={styles.netToggleBtnText}>
+            {isOnlineState ? 'Simulate Offline' : 'Restore Internet'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -464,7 +572,14 @@ export default function PatrolScreen() {
                   <View style={styles.waypointRowBody}>
                     <View style={styles.waypointTitleRow}>
                       <Text style={styles.waypointTypeTitle}>{obs.type}</Text>
-                      <Text style={styles.waypointTimeText}>{obs.timestamp}</Text>
+                      <View style={styles.syncBadgeRow}>
+                        <Text style={styles.waypointTimeText}>{obs.timestamp}</Text>
+                        <View style={[styles.syncBadgePill, (obs.syncStatus || (isOnlineState ? 'SUBMITTED' : 'PENDING_SYNC')) === 'PENDING_SYNC' ? styles.syncBadgePending : styles.syncBadgeSubmitted]}>
+                          <Text style={styles.syncBadgePillText}>
+                            {obs.syncStatus || (isOnlineState ? 'SUBMITTED' : 'PENDING_SYNC')}
+                          </Text>
+                        </View>
+                      </View>
                     </View>
                     <Text style={styles.waypointCoordsSub}>
                       📍 {obs.latitude}° N, {obs.longitude}° E • Patrol: {obs.patrolId || 'Active'}
@@ -490,6 +605,7 @@ export default function PatrolScreen() {
             <View style={styles.pathListContainer}>
               {markedWaypoints.map((wp) => {
                 const config = WAYPOINT_TYPES.find((item) => item.type === wp.type) || WAYPOINT_TYPES[6];
+                const currentSync = wp.syncStatus || (isOnlineState ? 'SUBMITTED' : 'PENDING_SYNC');
                 return (
                   <View key={wp.id} style={styles.waypointRowCard}>
                     <View style={[styles.waypointBadgeIcon, { backgroundColor: config.color }]}>
@@ -498,7 +614,12 @@ export default function PatrolScreen() {
                     <View style={styles.waypointRowBody}>
                       <View style={styles.waypointTitleRow}>
                         <Text style={styles.waypointTypeTitle}>{config.label}</Text>
-                        <Text style={styles.waypointTimeText}>{wp.timestamp}</Text>
+                        <View style={styles.syncBadgeRow}>
+                          <Text style={styles.waypointTimeText}>{wp.timestamp}</Text>
+                          <View style={[styles.syncBadgePill, currentSync === 'PENDING_SYNC' ? styles.syncBadgePending : styles.syncBadgeSubmitted]}>
+                            <Text style={styles.syncBadgePillText}>{currentSync}</Text>
+                          </View>
+                        </View>
                       </View>
                       <Text style={styles.waypointCoordsSub}>
                         📍 {wp.latitude}° N, {wp.longitude}° E
@@ -1809,5 +1930,85 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+
+  // Network Connectivity Banner Styles
+  netBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  netBannerOnline: {
+    backgroundColor: '#ECFDF5',
+    borderBottomColor: '#A7F3D0',
+  },
+  netBannerOffline: {
+    backgroundColor: '#FEF2F2',
+    borderBottomColor: '#FCA5A5',
+  },
+  netBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    marginRight: 10,
+  },
+  netBannerTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  netBannerSub: {
+    fontSize: 11,
+    color: '#4B5563',
+    marginTop: 1,
+  },
+  netToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    gap: 5,
+  },
+  netBtnOffline: {
+    backgroundColor: '#DC2626',
+  },
+  netBtnOnline: {
+    backgroundColor: '#059669',
+  },
+  netToggleBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  // Sync Badge Pills
+  syncBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  syncBadgePill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  syncBadgePending: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+  },
+  syncBadgeSubmitted: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#86EFAC',
+  },
+  syncBadgePillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#111827',
   },
 });

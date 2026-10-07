@@ -18,6 +18,7 @@ import Colors from '../../constants/colors';
 
 import { AssignedPatrol, RangerStatus } from '../../types/patrol';
 import { patrolApiService, MOCK_ASSIGNED_PATROLS } from '../../services/api/patrols';
+import { offlineSyncService } from '../../services/api/offlineSync';
 
 const ELEPHANT_E014_IMG =
   'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Asian_elephant_-_melbourne_zoo.jpg/320px-Asian_elephant_-_melbourne_zoo.jpg';
@@ -77,11 +78,16 @@ export default function DashboardScreen() {
   const [showAllPatrols, setShowAllPatrols] = useState(false);
   const [selectedPatrol, setSelectedPatrol] = useState<AssignedPatrol | null>(null);
   const [rangerStatus, setRangerStatus] = useState<RangerStatus>('AVAILABLE');
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
 
   const fetchPatrols = async () => {
     try {
       const status = await patrolApiService.getRangerStatus();
       setRangerStatus(status);
+
+      const queue = await offlineSyncService.getQueue();
+      const pending = queue.filter((item) => item.status === 'PENDING_SYNC').length;
+      setPendingSyncCount(pending);
 
       const response = await patrolApiService.getRangerAssignedPatrols('R001');
       if (response.data && response.data.length > 0) {
@@ -89,6 +95,16 @@ export default function DashboardScreen() {
       }
     } catch {
       // Fall back to MOCK_ASSIGNED_PATROLS
+    }
+  };
+
+  const handleSyncNow = async () => {
+    const { syncedCount } = await offlineSyncService.syncPendingItems();
+    await fetchPatrols();
+    if (Platform.OS === 'web') {
+      window.alert(`Sync completed! ${syncedCount} item(s) uploaded (Status: SUBMITTED).`);
+    } else {
+      Alert.alert('Sync Complete', `Uploaded ${syncedCount} item(s) to remote server (Status: SUBMITTED).`);
     }
   };
 
@@ -282,13 +298,29 @@ export default function DashboardScreen() {
             <Text style={styles.statusCardValue}>GPS Ready</Text>
           </View>
 
-          <View style={styles.statusCard}>
+          <TouchableOpacity
+            style={styles.statusCard}
+            onPress={handleSyncNow}
+            activeOpacity={0.85}
+          >
             <View style={styles.statusCardHeader}>
-              <View style={styles.greenStatusDot} />
+              <View
+                style={[
+                  styles.greenStatusDot,
+                  pendingSyncCount > 0 && { backgroundColor: '#F59E0B' },
+                ]}
+              />
               <Text style={styles.statusCardLabel}>OFFLINE SYNC</Text>
             </View>
-            <Text style={styles.statusCardValue}>Network OK</Text>
-          </View>
+            <Text
+              style={[
+                styles.statusCardValue,
+                pendingSyncCount > 0 && { color: '#F59E0B' },
+              ]}
+            >
+              {pendingSyncCount > 0 ? `${pendingSyncCount} PENDING_SYNC` : 'SUBMITTED / OK'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Quick Actions Grid */}
