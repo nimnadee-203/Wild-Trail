@@ -14,13 +14,14 @@ export function PatrolRouteMap({
 }: PatrolRouteMapProps) {
   const webViewRef = useRef<WebView>(null);
   const html = useMemo(
-    () => createPatrolMapHtml({
-      editable,
-      mode: 'route',
-      route: [],
-      checkpoints: [],
-      overlays: [],
-    }),
+    () =>
+      createPatrolMapHtml({
+        editable,
+        mode,
+        route,
+        checkpoints,
+        overlays,
+      }),
     [editable]
   );
 

@@ -16,11 +16,6 @@ export const USER_ROLES: Record<UserRole, { key: UserRole; title: string; descri
     title: 'Community Liaison',
     description: 'Human-wildlife conflict mitigation and community safety alerts.',
   },
-  manager: {
-    key: 'manager',
-    title: 'Park Manager',
-    description: 'Park-wide incident oversight, investigation, and reporting.',
-  },
   admin: {
     key: 'admin',
     title: 'System Administrator',

@@ -15,6 +15,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
+import { PatrolRouteMap } from '../../components/manager/PatrolRouteMap';
 
 import { AssignedPatrol, RangerStatus } from '../../types/patrol';
 import { patrolApiService, MOCK_ASSIGNED_PATROLS } from '../../services/api/patrols';
@@ -532,47 +533,17 @@ export default function DashboardScreen() {
                     </Text>
                   </View>
 
-                  <View style={styles.mapboxCanvas}>
-                    {/* Grid/Terrain Overlay */}
-                    <View style={styles.mapTerrainGrid} />
-
-                    {/* Polyline Route Connections */}
-                    <View style={styles.routePolylineSegment1} />
-                    <View style={styles.routePolylineSegment2} />
-
-                    {/* Start Waypoint Pin */}
-                    <View style={[styles.mapMarkerPin, { top: '65%', left: '18%' }]}>
-                      <View style={styles.startMarkerCircle}>
-                        <Text style={styles.markerText}>START</Text>
-                      </View>
-                      <Text style={styles.markerCoordSub}>
-                        {selectedPatrol.route[0]
-                          ? `${selectedPatrol.route[0][1].toFixed(3)}°, ${selectedPatrol.route[0][0].toFixed(3)}°`
-                          : ''}
-                      </Text>
-                    </View>
-
-                    {/* Mid Waypoint Pin */}
-                    {selectedPatrol.route.length > 1 && (
-                      <View style={[styles.mapMarkerPin, { top: '42%', left: '50%' }]}>
-                        <View style={styles.midMarkerCircle}>
-                          <Ionicons name="location" size={12} color="#FFFFFF" />
-                        </View>
-                      </View>
-                    )}
-
-                    {/* End Waypoint Pin */}
-                    {selectedPatrol.route.length > 2 && (
-                      <View style={[styles.mapMarkerPin, { top: '20%', left: '78%' }]}>
-                        <View style={styles.endMarkerCircle}>
-                          <Text style={styles.markerText}>END</Text>
-                        </View>
-                        <Text style={styles.markerCoordSub}>
-                          {selectedPatrol.route[selectedPatrol.route.length - 1][1].toFixed(3)}°,{' '}
-                          {selectedPatrol.route[selectedPatrol.route.length - 1][0].toFixed(3)}°
-                        </Text>
-                      </View>
-                    )}
+                  <View style={styles.mapboxMapWrapper}>
+                    <PatrolRouteMap
+                      editable={false}
+                      route={selectedPatrol.route.map(([lng, lat]) => ({ latitude: lat, longitude: lng }))}
+                      checkpoints={selectedPatrol.route.map(([lng, lat], idx) => ({
+                        id: `cp-${idx}`,
+                        label: idx === 0 ? 'START' : idx === selectedPatrol.route.length - 1 ? 'END' : `WP-${idx + 1}`,
+                        latitude: lat,
+                        longitude: lng,
+                      }))}
+                    />
                   </View>
                 </View>
 
@@ -1021,6 +992,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#8EA69A',
+  },
+  mapboxMapWrapper: {
+    height: 220,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginTop: 8,
   },
   mapboxCanvas: {
     height: 150,
