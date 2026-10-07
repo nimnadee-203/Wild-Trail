@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, Badge } from '../../components/ui';
 import { useLocation } from '../../hooks/useLocation';
@@ -9,9 +9,34 @@ import Colors from '../../constants/colors';
 
 export default function PatrolScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+
+  const patrolId = typeof params.patrolId === 'string' ? params.patrolId : null;
+  const patrolName = typeof params.patrolName === 'string' ? params.patrolName : 'Standard Patrol Route';
+  const park = typeof params.park === 'string' ? params.park : 'Yala National Park';
+  const priority = typeof params.priority === 'string' ? params.priority : 'NORMAL';
+
+  let parsedCoords: [number, number][] = [];
+  if (typeof params.routeCoords === 'string') {
+    try {
+      parsedCoords = JSON.parse(params.routeCoords);
+    } catch {
+      parsedCoords = [];
+    }
+  }
+
   const { location, errorMsg, isLoading, refreshLocation } = useLocation();
-  const [isPatrolling, setIsPatrolling] = useState(false);
-  const [pointCount, setPointCount] = useState(0);
+  const [isPatrolling, setIsPatrolling] = useState(!!patrolId);
+  const [pointCount, setPointCount] = useState(patrolId ? 1 : 0);
+
+  useEffect(() => {
+    if (isPatrolling) {
+      const interval = setInterval(() => {
+        setPointCount((prev) => prev + 1);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [isPatrolling]);
 
   const togglePatrol = () => {
     setIsPatrolling((prev) => !prev);
@@ -33,8 +58,8 @@ export default function PatrolScreen() {
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>GPS Patrol Tracking</Text>
-            <Text style={styles.headerSubtitle}>Field Ranger Path & Breadcrumbs</Text>
+            <Text style={styles.headerTitle}>{patrolId ? `Patrol: ${patrolId}` : 'GPS Patrol Tracking'}</Text>
+            <Text style={styles.headerSubtitle}>{park} • Active Field GPS</Text>
           </View>
         </View>
 
@@ -45,6 +70,40 @@ export default function PatrolScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
+        {/* Active Assigned Patrol Banner Card */}
+        {patrolId && (
+          <Card style={styles.assignedBannerCard}>
+            <View style={styles.assignedBannerHeader}>
+              <View style={styles.assignedBadgePill}>
+                <Ionicons name="shield-checkmark" size={14} color="#4ADE80" />
+                <Text style={styles.assignedBadgeText}>ACTIVE ASSIGNED PATROL</Text>
+              </View>
+              <View style={styles.priorityPill}>
+                <Text style={styles.priorityPillText}>{priority}</Text>
+              </View>
+            </View>
+
+            <Text style={styles.assignedPatrolNameTitle}>{patrolName}</Text>
+            <Text style={styles.assignedParkSub}>{park}</Text>
+
+            {/* Mapbox Route Waypoint Summary */}
+            <View style={styles.routeBoxSummary}>
+              <View style={styles.routeBoxHeader}>
+                <Ionicons name="navigate-outline" size={16} color="#059669" />
+                <Text style={styles.routeBoxHeaderText}>
+                  Mapbox Route ({parsedCoords.length > 0 ? parsedCoords.length : 3} Waypoints Active)
+                </Text>
+              </View>
+
+              {parsedCoords.map((coord, idx) => (
+                <Text key={idx} style={styles.waypointText}>
+                  📍 Waypoint {idx + 1}: {coord[1].toFixed(4)}° N, {coord[0].toFixed(4)}° E
+                </Text>
+              ))}
+            </View>
+          </Card>
+        )}
+
         <Card style={styles.statusCard}>
           <View style={styles.statusRow}>
             <Text style={styles.sectionTitle}>Patrol Session</Text>
@@ -55,7 +114,7 @@ export default function PatrolScreen() {
             />
           </View>
 
-          <Text style={styles.statLabel}>Recorded GPS Points: {pointCount}</Text>
+          <Text style={styles.statLabel}>Recorded GPS Breadcrumb Points: {pointCount}</Text>
 
           <Button
             title={isPatrolling ? 'Stop Patrol Session' : 'Start GPS Patrol'}
@@ -66,7 +125,7 @@ export default function PatrolScreen() {
         </Card>
 
         <Card style={styles.locationCard}>
-          <Text style={styles.sectionTitle}>Current GPS Coordinates</Text>
+          <Text style={styles.sectionTitle}>Current Live GPS Coordinates</Text>
 
           {isLoading ? (
             <Text style={styles.infoText}>Acquiring GPS Signal...</Text>
@@ -190,6 +249,84 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.danger,
     marginVertical: 12,
+  },
+  assignedBannerCard: {
+    marginBottom: 16,
+    backgroundColor: '#0F1D17',
+    borderColor: '#294B3B',
+    borderWidth: 1,
+    padding: 14,
+  },
+  assignedBannerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  assignedBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1C3529',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#294B3B',
+    gap: 4,
+  },
+  assignedBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#4ADE80',
+    letterSpacing: 0.5,
+  },
+  priorityPill: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  priorityPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#EF4444',
+  },
+  assignedPatrolNameTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  assignedParkSub: {
+    fontSize: 12,
+    color: '#8EA69A',
+    marginTop: 2,
+  },
+  routeBoxSummary: {
+    marginTop: 12,
+    backgroundColor: '#162C21',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#223B2E',
+  },
+  routeBoxHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  routeBoxHeaderText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4ADE80',
+  },
+  waypointText: {
+    fontSize: 12,
+    color: '#A7F3D0',
+    marginTop: 3,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   refreshBtn: {
     marginTop: 4,
