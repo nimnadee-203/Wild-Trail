@@ -24,16 +24,29 @@ export interface PatrolLog {
 
 export type ScheduledPatrolStatus = 'scheduled' | 'on patrol' | 'completed' | 'cancelled';
 
+export interface PatrolMapPoint {
+  latitude: number;
+  longitude: number;
+}
+
+export interface PatrolCheckpoint extends PatrolMapPoint {
+  id: string;
+  label: string;
+}
+
 export interface ScheduledPatrol {
   id: string;
   teamName: string;
   rangerName: string;
+  rangerId?: string;
   zone: string;
   date: string;
   startTime: string;
   endTime?: string;
   notes?: string;
   status: ScheduledPatrolStatus;
+  route: PatrolMapPoint[];
+  checkpoints: PatrolCheckpoint[];
   createdAt?: string;
   updatedAt?: string;
 }
