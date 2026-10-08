@@ -22,57 +22,6 @@ import { AssignedPatrol, RangerStatus } from '../../types/patrol';
 import { patrolApiService, MOCK_ASSIGNED_PATROLS } from '../../services/api/patrols';
 import { offlineSyncService } from '../../services/api/offlineSync';
 
-const ELEPHANT_E014_IMG =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Asian_elephant_-_melbourne_zoo.jpg/320px-Asian_elephant_-_melbourne_zoo.jpg';
-const ELEPHANT_E011_IMG =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Elephant_near_ndutu.jpg/320px-Elephant_near_ndutu.jpg';
-const LEOPARD_IMG =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Leopard_africa.jpg/320px-Leopard_africa.jpg';
-
-interface AlertItem {
-  id: string;
-  animalId: string;
-  species: string;
-  location: string;
-  level: 'HIGH' | 'MEDIUM' | 'LOW';
-  timestamp: string;
-  image: string;
-  notes: string;
-}
-
-const RECENT_ALERTS: AlertItem[] = [
-  {
-    id: '1',
-    animalId: 'Elephant E-014',
-    species: 'Asian Elephant (Bull)',
-    location: 'Farmland Zone B',
-    level: 'HIGH',
-    timestamp: '07:43 PM',
-    image: ELEPHANT_E014_IMG,
-    notes: 'Approaching human settlement (350m buffer breach)',
-  },
-  {
-    id: '2',
-    animalId: 'Elephant E-011',
-    species: 'Asian Elephant (Cow)',
-    location: 'Waterhole Zone C',
-    level: 'MEDIUM',
-    timestamp: '05:20 PM',
-    image: ELEPHANT_E011_IMG,
-    notes: 'Moving towards agricultural corridor',
-  },
-  {
-    id: '3',
-    animalId: 'Leopard L-003',
-    species: 'Indian Leopard',
-    location: 'Northern Buffer Boundary',
-    level: 'LOW',
-    timestamp: '02:15 PM',
-    image: LEOPARD_IMG,
-    notes: 'Resting within dense canopy safe zone',
-  },
-];
-
 export default function DashboardScreen() {
   const router = useRouter();
   const [broadcastSent, setBroadcastSent] = useState(false);
@@ -189,8 +138,8 @@ export default function DashboardScreen() {
                   rangerStatus === 'ON_PATROL'
                     ? styles.rangerStatusOnPatrol
                     : rangerStatus === 'RESPONDING_TO_ALERT'
-                    ? styles.rangerStatusResponding
-                    : styles.rangerStatusAvailable,
+                      ? styles.rangerStatusResponding
+                      : styles.rangerStatusAvailable,
                 ]}
               >
                 <View
@@ -199,8 +148,8 @@ export default function DashboardScreen() {
                     rangerStatus === 'ON_PATROL'
                       ? styles.rangerDotOnPatrol
                       : rangerStatus === 'RESPONDING_TO_ALERT'
-                      ? styles.rangerDotResponding
-                      : styles.rangerDotAvailable,
+                        ? styles.rangerDotResponding
+                        : styles.rangerDotAvailable,
                   ]}
                 />
                 <Text style={styles.rangerStatusText}>{rangerStatus.replace(/_/g, ' ')}</Text>
@@ -224,8 +173,8 @@ export default function DashboardScreen() {
                     patrol.priority === 'HIGH'
                       ? styles.priorityTagHigh
                       : patrol.priority === 'MEDIUM'
-                      ? styles.priorityTagMedium
-                      : styles.priorityTagLow,
+                        ? styles.priorityTagMedium
+                        : styles.priorityTagLow,
                   ]}
                 >
                   <Text style={styles.priorityTagText}>{patrol.priority} PRIORITY</Text>
@@ -236,8 +185,8 @@ export default function DashboardScreen() {
                     patrol.status === 'COMPLETED'
                       ? styles.statusTagCompleted
                       : patrol.status === 'IN_PROGRESS'
-                      ? styles.statusTagInProgress
-                      : styles.statusTagAssigned,
+                        ? styles.statusTagInProgress
+                        : styles.statusTagAssigned,
                   ]}
                 >
                   <Ionicons
@@ -245,16 +194,16 @@ export default function DashboardScreen() {
                       patrol.status === 'COMPLETED'
                         ? 'checkmark-circle'
                         : patrol.status === 'IN_PROGRESS'
-                        ? 'radio-button-on'
-                        : 'time-outline'
+                          ? 'radio-button-on'
+                          : 'time-outline'
                     }
                     size={11}
                     color={
                       patrol.status === 'COMPLETED'
                         ? '#4ADE80'
                         : patrol.status === 'IN_PROGRESS'
-                        ? '#60A5FA'
-                        : '#FBBF24'
+                          ? '#60A5FA'
+                          : '#FBBF24'
                     }
                   />
                   <Text
@@ -263,8 +212,8 @@ export default function DashboardScreen() {
                       patrol.status === 'COMPLETED'
                         ? styles.statusTagTextCompleted
                         : patrol.status === 'IN_PROGRESS'
-                        ? styles.statusTagTextInProgress
-                        : styles.statusTagTextAssigned,
+                          ? styles.statusTagTextInProgress
+                          : styles.statusTagTextAssigned,
                     ]}
                   >
                     {patrol.status.replace(/_/g, ' ')}
@@ -312,15 +261,15 @@ export default function DashboardScreen() {
                     (patrol.completionPercentage ?? 0) > 0 && (patrol.completionPercentage ?? 0) < 95
                       ? { color: '#F59E0B' }
                       : (patrol.completionPercentage ?? 0) >= 95
-                      ? { color: '#4ADE80' }
-                      : { color: '#9CA3AF' },
+                        ? { color: '#4ADE80' }
+                        : { color: '#9CA3AF' },
                   ]}
                 >
                   {patrol.status === 'COMPLETED'
                     ? `${patrol.completionPercentage ?? 100}% COMPLETED`
                     : patrol.status === 'IN_PROGRESS'
-                    ? 'IN PROGRESS'
-                    : 'PLANNED (0%)'}
+                      ? 'IN PROGRESS'
+                      : 'PLANNED (0%)'}
                 </Text>
               </View>
               <View style={styles.cardProgressBarTrack}>
@@ -328,13 +277,12 @@ export default function DashboardScreen() {
                   style={[
                     styles.cardProgressBarFill,
                     {
-                      width: `${
-                        patrol.status === 'COMPLETED'
+                      width: `${patrol.status === 'COMPLETED'
                           ? Math.min(100, patrol.completionPercentage ?? 100)
                           : patrol.status === 'IN_PROGRESS'
-                          ? 45
-                          : 0
-                      }%`,
+                            ? 45
+                            : 0
+                        }%`,
                       backgroundColor:
                         (patrol.completionPercentage ?? 0) > 0 && (patrol.completionPercentage ?? 0) < 95
                           ? '#F59E0B'
@@ -499,53 +447,7 @@ export default function DashboardScreen() {
           <Ionicons name="chevron-forward" size={20} color={Colors.light.primaryDark} />
         </TouchableOpacity>
 
-        {/* Recent Alerts Feed */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Recent Wildlife Alerts</Text>
-          <TouchableOpacity onPress={() => router.push('/alerts')} activeOpacity={0.7}>
-            <Text style={styles.seeAllText}>View All ({RECENT_ALERTS.length})</Text>
-          </TouchableOpacity>
-        </View>
 
-        {RECENT_ALERTS.map((alert) => (
-          <TouchableOpacity
-            key={alert.id}
-            style={styles.recentAlertItem}
-            activeOpacity={0.85}
-            onPress={() => router.push('/alerts')}
-          >
-            <Image source={{ uri: alert.image }} style={styles.recentAlertImage} />
-            <View style={styles.recentAlertInfo}>
-              <View style={styles.recentTitleRow}>
-                <Text style={styles.recentAlertName}>{alert.animalId}</Text>
-                <View
-                  style={[
-                    styles.levelBadge,
-                    alert.level === 'HIGH'
-                      ? styles.levelHigh
-                      : alert.level === 'MEDIUM'
-                      ? styles.levelMedium
-                      : styles.levelLow,
-                  ]}
-                >
-                  <Text style={styles.levelBadgeText}>{alert.level}</Text>
-                </View>
-              </View>
-
-              <Text style={styles.recentAlertSpecies}>{alert.species}</Text>
-
-              <View style={styles.recentMetaRow}>
-                <Ionicons name="location-outline" size={13} color="#6B7280" />
-                <Text style={styles.recentAlertLocation}>{alert.location}</Text>
-                <Text style={styles.metaDivider}>•</Text>
-                <Ionicons name="time-outline" size={13} color="#6B7280" />
-                <Text style={styles.recentAlertTime}>{alert.timestamp}</Text>
-              </View>
-            </View>
-
-            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
-          </TouchableOpacity>
-        ))}
 
         {/* Ranger Shift & Equipment Status */}
         <View style={styles.shiftCard}>
@@ -596,8 +498,8 @@ export default function DashboardScreen() {
                       selectedPatrol.priority === 'HIGH'
                         ? styles.priorityTagHigh
                         : selectedPatrol.priority === 'MEDIUM'
-                        ? styles.priorityTagMedium
-                        : styles.priorityTagLow,
+                          ? styles.priorityTagMedium
+                          : styles.priorityTagLow,
                     ]}
                   >
                     <Text style={styles.priorityTagText}>{selectedPatrol.priority} PRIORITY</Text>
@@ -647,11 +549,10 @@ export default function DashboardScreen() {
                       style={[
                         styles.cardProgressBarFill,
                         {
-                          width: `${
-                            selectedPatrol.status === 'COMPLETED'
+                          width: `${selectedPatrol.status === 'COMPLETED'
                               ? Math.min(100, selectedPatrol.completionPercentage ?? 100)
                               : 0
-                          }%`,
+                            }%`,
                           backgroundColor:
                             (selectedPatrol.completionPercentage ?? 0) > 0 && (selectedPatrol.completionPercentage ?? 0) < 95
                               ? '#F59E0B'

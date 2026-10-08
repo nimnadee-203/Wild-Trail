@@ -10,18 +10,86 @@ import {
   Switch,
   Alert,
   Platform,
+  Modal,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
 import { storageService } from '../../storage/asyncStorage';
 import { STORAGE_KEYS } from '../../storage/keys';
+import { userService } from '../../services/api/users';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const [highAccuracyGps, setHighAccuracyGps] = useState(true);
   const [criticalPushAlerts, setCriticalPushAlerts] = useState(true);
   const [offlineMapCache, setOfflineMapCache] = useState(true);
+
+  // Change Password Modal State
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+
+  const handleOpenPasswordModal = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError(null);
+    setPasswordSuccess(null);
+    setPasswordModalVisible(true);
+  };
+
+  const handleChangePasswordSubmit = async () => {
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (!currentPassword.trim()) {
+      setPasswordError('Please enter your current password.');
+      return;
+    }
+    if (!newPassword.trim()) {
+      setPasswordError('Please enter your new password.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New password and confirmation do not match.');
+      return;
+    }
+    if (newPassword === currentPassword) {
+      setPasswordError('New password must be different from current password.');
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      await userService.changePassword(currentPassword, newPassword);
+      setPasswordSuccess('Password updated successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => {
+        setPasswordModalVisible(false);
+        setPasswordSuccess(null);
+      }, 1500);
+    } catch (err: any) {
+      setPasswordError(err?.message || 'Failed to update password. Please try again.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     const doLogout = async () => {
@@ -194,6 +262,15 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.actionBtnOutline}
+            onPress={handleOpenPasswordModal}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="key-outline" size={18} color={Colors.light.primaryDark} />
+            <Text style={styles.actionBtnOutlineText}>Change Security Password</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionBtnOutline}
             onPress={() => router.push('/login')}
             activeOpacity={0.7}
           >
@@ -211,6 +288,146 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Change Password Modal */}
+      <Modal
+        visible={passwordModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPasswordModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContentCard}>
+            <View style={styles.modalHeaderRow}>
+              <View style={styles.modalTitleGroup}>
+                <Ionicons name="key" size={22} color={Colors.light.primaryDark} />
+                <Text style={styles.modalTitleText}>Change Security Password</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setPasswordModalVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={22} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ marginVertical: 8 }}>
+              {passwordError && (
+                <View style={styles.errorAlertBox}>
+                  <Ionicons name="alert-circle" size={18} color="#DC2626" />
+                  <Text style={styles.errorAlertText}>{passwordError}</Text>
+                </View>
+              )}
+
+              {passwordSuccess && (
+                <View style={styles.successAlertBox}>
+                  <Ionicons name="checkmark-circle" size={18} color="#15803D" />
+                  <Text style={styles.successAlertText}>{passwordSuccess}</Text>
+                </View>
+              )}
+
+              {/* Current Password Field */}
+              <Text style={styles.inputFieldLabel}>CURRENT PASSWORD</Text>
+              <View style={styles.passwordInputWrap}>
+                <TextInput
+                  style={styles.passwordTextInput}
+                  placeholder="Enter current password"
+                  placeholderTextColor="#9CA3AF"
+                  secureTextEntry={!showCurrentPassword}
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  style={styles.eyeIconBtn}
+                  onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                >
+                  <Ionicons
+                    name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* New Password Field */}
+              <Text style={styles.inputFieldLabel}>NEW PASSWORD</Text>
+              <View style={styles.passwordInputWrap}>
+                <TextInput
+                  style={styles.passwordTextInput}
+                  placeholder="At least 6 characters"
+                  placeholderTextColor="#9CA3AF"
+                  secureTextEntry={!showNewPassword}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  style={styles.eyeIconBtn}
+                  onPress={() => setShowNewPassword(!showNewPassword)}
+                >
+                  <Ionicons
+                    name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Confirm New Password Field */}
+              <Text style={styles.inputFieldLabel}>CONFIRM NEW PASSWORD</Text>
+              <View style={styles.passwordInputWrap}>
+                <TextInput
+                  style={styles.passwordTextInput}
+                  placeholder="Re-enter new password"
+                  placeholderTextColor="#9CA3AF"
+                  secureTextEntry={!showConfirmPassword}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  style={styles.eyeIconBtn}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity
+                style={styles.savePasswordBtn}
+                onPress={handleChangePasswordSubmit}
+                disabled={passwordLoading}
+                activeOpacity={0.85}
+              >
+                {passwordLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+                    <Text style={styles.savePasswordBtnText}>Update Password</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.cancelPasswordBtn}
+                onPress={() => setPasswordModalVisible(false)}
+                disabled={passwordLoading}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelPasswordBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -470,6 +687,144 @@ const styles = StyleSheet.create({
   },
   actionBtnDangerText: {
     color: '#DC2626',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalContentCard: {
+    width: '100%',
+    maxWidth: 480,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalTitleText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  errorAlertBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+    gap: 8,
+  },
+  errorAlertText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  successAlertBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+    gap: 8,
+  },
+  successAlertText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#15803D',
+  },
+  inputFieldLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#4B5563',
+    letterSpacing: 0.8,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  passwordInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+  },
+  passwordTextInput: {
+    flex: 1,
+    height: 44,
+    fontSize: 14,
+    color: '#111827',
+  },
+  eyeIconBtn: {
+    padding: 8,
+  },
+  modalActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  savePasswordBtn: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.light.primaryDark,
+    borderRadius: 10,
+    paddingVertical: 12,
+    gap: 6,
+  },
+  savePasswordBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  cancelPasswordBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  cancelPasswordBtnText: {
+    color: '#4B5563',
     fontSize: 14,
     fontWeight: '700',
   },
