@@ -16,6 +16,29 @@ import {
 import { storageService } from '../../storage/asyncStorage';
 import { STORAGE_KEYS } from '../../storage/keys';
 
+export function calculateRouteDistance(route: [number, number][]): number {
+  if (!route || route.length < 2) return 4.8;
+  let totalKm = 0;
+  for (let i = 1; i < route.length; i++) {
+    const lon1 = route[i - 1][0];
+    const lat1 = route[i - 1][1];
+    const lon2 = route[i][0];
+    const lat2 = route[i][1];
+    const R = 6371; // earth radius in km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    totalKm += R * c;
+  }
+  return parseFloat(totalKm.toFixed(2)) || 4.8;
+}
+
 export const MOCK_ASSIGNED_PATROLS: AssignedPatrol[] = [
   {
     id: 'PAT-0156',
@@ -26,6 +49,7 @@ export const MOCK_ASSIGNED_PATROLS: AssignedPatrol[] = [
     duration: 4,
     priority: 'HIGH',
     status: 'ASSIGNED',
+    plannedDistanceKm: 4.8,
     instructions: 'Check northern boundary, fence integrity, and water points for anti-poaching activity.',
     route: [
       [81.503, 6.3672],
@@ -42,6 +66,7 @@ export const MOCK_ASSIGNED_PATROLS: AssignedPatrol[] = [
     duration: 3,
     priority: 'MEDIUM',
     status: 'ASSIGNED',
+    plannedDistanceKm: 3.6,
     instructions: 'Monitor river bank wildlife crossing corridor and survey waterhole Zone C.',
     route: [
       [81.512, 6.371],
@@ -58,6 +83,7 @@ export const MOCK_ASSIGNED_PATROLS: AssignedPatrol[] = [
     duration: 5,
     priority: 'LOW',
     status: 'ASSIGNED',
+    plannedDistanceKm: 5.2,
     instructions: 'Inspect coastal perimeter, verify camera trap operations, and report any encroachment.',
     route: [
       [81.52, 6.38],
@@ -93,6 +119,34 @@ export function mapScheduledToAssignedPatrol(sp: ScheduledPatrol): AssignedPatro
 
 export const patrolApiService = {
   async getRangerAssignedPatrols(rangerId: string = 'R001'): Promise<ApiResponse<AssignedPatrol[]>> {
+    const completedMap = new Map<string, CompletedPatrolSummary>();
+    try {
+      const history = await storageService.getItem<CompletedPatrolSummary[]>(STORAGE_KEYS.COMPLETED_PATROLS);
+      if (history && history.length > 0) {
+        history.forEach((c) => completedMap.set(c.patrolId, c));
+      }
+    } catch {
+      // Ignore
+    }
+
+    // Sync inMemoryAssignedPatrols with completed history
+    inMemoryAssignedPatrols = inMemoryAssignedPatrols.map((item) => {
+      const completedInfo = completedMap.get(item.id);
+      if (completedInfo) {
+        return {
+          ...item,
+          status: 'COMPLETED' as const,
+          plannedDistanceKm: completedInfo.plannedDistanceKm || item.plannedDistanceKm || calculateRouteDistance(item.route),
+          completionPercentage: completedInfo.completionPercentage ?? 100,
+          completedDistanceKm: completedInfo.distanceKm,
+        };
+      }
+      return {
+        ...item,
+        plannedDistanceKm: item.plannedDistanceKm || calculateRouteDistance(item.route),
+      };
+    });
+
     try {
       const q = query(collection(db, 'assignedPatrols'));
       const snapshot = await getDocs(q);
@@ -113,7 +167,15 @@ export const patrolApiService = {
             route: data.route || [],
             checkpoints: data.checkpoints || [],
           };
-          return mapScheduledToAssignedPatrol(sp);
+          const mapped = mapScheduledToAssignedPatrol(sp);
+          const completedInfo = completedMap.get(mapped.id);
+          if (completedInfo) {
+            mapped.status = 'COMPLETED';
+            mapped.plannedDistanceKm = completedInfo.plannedDistanceKm || mapped.plannedDistanceKm;
+            mapped.completionPercentage = completedInfo.completionPercentage ?? 100;
+            mapped.completedDistanceKm = completedInfo.distanceKm;
+          }
+          return mapped;
         });
         if (firestorePatrols.length > 0) {
           return { data: firestorePatrols, error: null, status: 200 };
@@ -249,14 +311,20 @@ export const patrolApiService = {
       startTime: string;
       endTime: string;
       distanceKm: number;
+      plannedDistanceKm?: number;
       actualPath: ActualPathPoint[];
       markedWaypoints: MarkedWaypoint[];
       observations: PatrolObservation[];
     }
   ): Promise<CompletedPatrolSummary> {
+    const plannedDist = summaryInput.plannedDistanceKm || 4.8;
+    const completionPct = Math.min(100, Math.max(1, Math.round((summaryInput.distanceKm / plannedDist) * 100)));
+
     const summary: CompletedPatrolSummary = {
       patrolId,
       ...summaryInput,
+      plannedDistanceKm: plannedDist,
+      completionPercentage: completionPct,
       patrolStatus: 'COMPLETED',
       rangerStatus: 'AVAILABLE',
       completedAt: new Date().toISOString(),
@@ -264,7 +332,15 @@ export const patrolApiService = {
 
     // 1. Update patrol status in mock data: IN_PROGRESS -> COMPLETED
     inMemoryAssignedPatrols = inMemoryAssignedPatrols.map((item) =>
-      item.id === patrolId ? { ...item, status: 'COMPLETED' as const } : item
+      item.id === patrolId
+        ? {
+            ...item,
+            status: 'COMPLETED' as const,
+            completedDistanceKm: summaryInput.distanceKm,
+            plannedDistanceKm: plannedDist,
+            completionPercentage: completionPct,
+          }
+        : item
     );
 
     // 2. Save complete log into Firestore if doc exists

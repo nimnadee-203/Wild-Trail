@@ -70,6 +70,9 @@ export interface AssignedPatrol {
   status: 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   instructions: string;
   route: [number, number][]; // Array of [longitude, latitude] tuples
+  plannedDistanceKm?: number;
+  completionPercentage?: number;
+  completedDistanceKm?: number;
 }
 
 export interface ActualPathPoint {
@@ -135,6 +138,8 @@ export interface ActivePatrolSession {
   actualPath: ActualPathPoint[];
   markedWaypoints: MarkedWaypoint[];
   observations: PatrolObservation[];
+  plannedDistanceKm?: number;
+  completionPercentage?: number;
 }
 
 export interface CompletedPatrolSummary {
@@ -145,6 +150,8 @@ export interface CompletedPatrolSummary {
   startTime: string;
   endTime: string;
   distanceKm: number;
+  plannedDistanceKm?: number;
+  completionPercentage?: number;
   actualPath: ActualPathPoint[];
   markedWaypoints: MarkedWaypoint[];
   observations: PatrolObservation[];

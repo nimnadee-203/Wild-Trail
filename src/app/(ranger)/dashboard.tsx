@@ -235,6 +235,46 @@ export default function DashboardScreen() {
                 >
                   <Text style={styles.priorityTagText}>{patrol.priority} PRIORITY</Text>
                 </View>
+                <View
+                  style={[
+                    styles.statusTag,
+                    patrol.status === 'COMPLETED'
+                      ? styles.statusTagCompleted
+                      : patrol.status === 'IN_PROGRESS'
+                      ? styles.statusTagInProgress
+                      : styles.statusTagAssigned,
+                  ]}
+                >
+                  <Ionicons
+                    name={
+                      patrol.status === 'COMPLETED'
+                        ? 'checkmark-circle'
+                        : patrol.status === 'IN_PROGRESS'
+                        ? 'radio-button-on'
+                        : 'time-outline'
+                    }
+                    size={11}
+                    color={
+                      patrol.status === 'COMPLETED'
+                        ? '#4ADE80'
+                        : patrol.status === 'IN_PROGRESS'
+                        ? '#60A5FA'
+                        : '#FBBF24'
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.statusTagText,
+                      patrol.status === 'COMPLETED'
+                        ? styles.statusTagTextCompleted
+                        : patrol.status === 'IN_PROGRESS'
+                        ? styles.statusTagTextInProgress
+                        : styles.statusTagTextAssigned,
+                    ]}
+                  >
+                    {patrol.status.replace(/_/g, ' ')}
+                  </Text>
+                </View>
               </View>
 
               <TouchableOpacity
@@ -265,6 +305,54 @@ export default function DashboardScreen() {
                   {patrol.startTime} ({patrol.duration} hrs) • {patrol.date}
                 </Text>
               </View>
+            </View>
+
+            {/* Progress Bar Container */}
+            <View style={styles.cardProgressContainer}>
+              <View style={styles.cardProgressHeader}>
+                <Text style={styles.cardProgressLabel}>ROUTE COVERAGE PROGRESS</Text>
+                <Text
+                  style={[
+                    styles.cardProgressPctText,
+                    (patrol.completionPercentage ?? 0) > 0 && (patrol.completionPercentage ?? 0) < 95
+                      ? { color: '#F59E0B' }
+                      : (patrol.completionPercentage ?? 0) >= 95
+                      ? { color: '#4ADE80' }
+                      : { color: '#9CA3AF' },
+                  ]}
+                >
+                  {patrol.status === 'COMPLETED'
+                    ? `${patrol.completionPercentage ?? 100}% COMPLETED`
+                    : patrol.status === 'IN_PROGRESS'
+                    ? 'IN PROGRESS'
+                    : 'PLANNED (0%)'}
+                </Text>
+              </View>
+              <View style={styles.cardProgressBarTrack}>
+                <View
+                  style={[
+                    styles.cardProgressBarFill,
+                    {
+                      width: `${
+                        patrol.status === 'COMPLETED'
+                          ? Math.min(100, patrol.completionPercentage ?? 100)
+                          : patrol.status === 'IN_PROGRESS'
+                          ? 45
+                          : 0
+                      }%`,
+                      backgroundColor:
+                        (patrol.completionPercentage ?? 0) > 0 && (patrol.completionPercentage ?? 0) < 95
+                          ? '#F59E0B'
+                          : '#4ADE80',
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.cardProgressSubtext}>
+                {patrol.status === 'COMPLETED'
+                  ? `${patrol.completedDistanceKm ?? 0} km covered of ${patrol.plannedDistanceKm ?? 4.8} km route`
+                  : `Planned total route: ~${patrol.plannedDistanceKm ?? 4.8} km`}
+              </Text>
             </View>
           </View>
         ))}
@@ -517,8 +605,54 @@ export default function DashboardScreen() {
                 </View>
 
                 <View style={styles.modalDetailGroup}>
-                  <Text style={styles.modalDetailLabel}>PATROL STATUS</Text>
-                  <Text style={styles.modalDetailValue}>{selectedPatrol.status}</Text>
+                  <Text style={styles.modalDetailLabel}>PATROL STATUS & ROUTE COVERAGE</Text>
+                  <Text style={styles.modalDetailValue}>
+                    {selectedPatrol.status === 'COMPLETED'
+                      ? `COMPLETED (${selectedPatrol.completionPercentage ?? 100}% of planned route)`
+                      : selectedPatrol.status}
+                  </Text>
+                </View>
+
+                {/* Progress Bar inside Modal */}
+                <View style={[styles.cardProgressContainer, { backgroundColor: '#112119', marginBottom: 16 }]}>
+                  <View style={styles.cardProgressHeader}>
+                    <Text style={styles.cardProgressLabel}>COMPLETION METRIC</Text>
+                    <Text
+                      style={[
+                        styles.cardProgressPctText,
+                        (selectedPatrol.completionPercentage ?? 0) > 0 && (selectedPatrol.completionPercentage ?? 0) < 95
+                          ? { color: '#F59E0B' }
+                          : { color: '#4ADE80' },
+                      ]}
+                    >
+                      {selectedPatrol.status === 'COMPLETED'
+                        ? `${selectedPatrol.completionPercentage ?? 100}% COVERED`
+                        : '0% STARTED'}
+                    </Text>
+                  </View>
+                  <View style={styles.cardProgressBarTrack}>
+                    <View
+                      style={[
+                        styles.cardProgressBarFill,
+                        {
+                          width: `${
+                            selectedPatrol.status === 'COMPLETED'
+                              ? Math.min(100, selectedPatrol.completionPercentage ?? 100)
+                              : 0
+                          }%`,
+                          backgroundColor:
+                            (selectedPatrol.completionPercentage ?? 0) > 0 && (selectedPatrol.completionPercentage ?? 0) < 95
+                              ? '#F59E0B'
+                              : '#4ADE80',
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.cardProgressSubtext}>
+                    {selectedPatrol.status === 'COMPLETED'
+                      ? `${selectedPatrol.completedDistanceKm ?? 0} km covered of ${selectedPatrol.plannedDistanceKm ?? 4.8} km route`
+                      : `Planned sector distance: ~${selectedPatrol.plannedDistanceKm ?? 4.8} km`}
+                  </Text>
                 </View>
 
                 {/* Mapbox Route Preview Card */}
@@ -561,18 +695,27 @@ export default function DashboardScreen() {
             )}
 
             <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.startPatrolModalBtn}
-                onPress={() => {
-                  if (selectedPatrol) {
-                    handleStartPatrol(selectedPatrol);
-                  }
-                }}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="footsteps" size={18} color="#FFFFFF" />
-                <Text style={styles.startPatrolModalBtnText}>Start Patrol</Text>
-              </TouchableOpacity>
+              {selectedPatrol?.status === 'COMPLETED' ? (
+                <View style={[styles.startPatrolModalBtn, styles.completedPatrolModalBtn]}>
+                  <Ionicons name="checkmark-circle" size={18} color="#4ADE80" />
+                  <Text style={[styles.startPatrolModalBtnText, { color: '#4ADE80' }]}>
+                    Patrol Completed
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.startPatrolModalBtn}
+                  onPress={() => {
+                    if (selectedPatrol) {
+                      handleStartPatrol(selectedPatrol);
+                    }
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="footsteps" size={18} color="#FFFFFF" />
+                  <Text style={styles.startPatrolModalBtnText}>Start Patrol</Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={styles.closeModalBtn}
@@ -798,6 +941,86 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.5,
+  },
+  statusTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    gap: 4,
+  },
+  statusTagCompleted: {
+    backgroundColor: 'rgba(74, 222, 128, 0.15)',
+    borderColor: '#4ADE80',
+  },
+  statusTagInProgress: {
+    backgroundColor: 'rgba(96, 165, 250, 0.15)',
+    borderColor: '#60A5FA',
+  },
+  statusTagAssigned: {
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    borderColor: '#FBBF24',
+  },
+  statusTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  statusTagTextCompleted: {
+    color: '#4ADE80',
+  },
+  statusTagTextInProgress: {
+    color: '#60A5FA',
+  },
+  statusTagTextAssigned: {
+    color: '#FBBF24',
+  },
+  cardProgressContainer: {
+    marginTop: 14,
+    backgroundColor: '#101E17',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1D3629',
+  },
+  cardProgressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  cardProgressLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#8EA69A',
+    letterSpacing: 0.8,
+  },
+  cardProgressPctText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  cardProgressBarTrack: {
+    height: 8,
+    backgroundColor: '#1E362A',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  cardProgressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  cardProgressSubtext: {
+    fontSize: 11,
+    color: '#8EA69A',
+    marginTop: 5,
+  },
+  completedPatrolModalBtn: {
+    backgroundColor: 'rgba(74, 222, 128, 0.12)',
+    borderColor: '#4ADE80',
+    borderWidth: 1,
   },
   viewPatrolBtn: {
     flexDirection: 'row',

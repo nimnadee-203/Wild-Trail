@@ -242,6 +242,9 @@ export default function PatrolScreen() {
       const endTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const startTimeStr = typeof params.startTime === 'string' ? params.startTime : actualPath[0]?.timestamp || '08:00 AM';
       const distanceKm = calculatePathDistance(actualPath);
+      const plannedDistanceKm = calculatePathDistance(
+        parsedRouteCoords.map(([lng, lat]) => ({ latitude: lat, longitude: lng, timestamp: '' }))
+      ) || 4.8;
 
       // 3. Save actual path, waypoints, observations; set Patrol = COMPLETED & Ranger = AVAILABLE
       const summary = await patrolApiService.completePatrolSession(
@@ -253,6 +256,7 @@ export default function PatrolScreen() {
           startTime: startTimeStr,
           endTime: endTimeStr,
           distanceKm,
+          plannedDistanceKm,
           actualPath,
           markedWaypoints,
           observations,
@@ -993,6 +997,31 @@ export default function PatrolScreen() {
                   <Text style={styles.summaryInfoLabel}>Time Window</Text>
                   <Text style={styles.summaryInfoVal}>
                     {completedSummary?.startTime} ➔ {completedSummary?.endTime}
+                  </Text>
+                </View>
+
+                {/* Progress Bar Component */}
+                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#374151' }}>
+                      ROUTE COVERAGE PROGRESS
+                    </Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: (completedSummary?.completionPercentage ?? 100) < 95 ? '#D97706' : '#059669' }}>
+                      {completedSummary?.completionPercentage ?? 100}% COMPLETED
+                    </Text>
+                  </View>
+                  <View style={{ height: 10, backgroundColor: '#E5E7EB', borderRadius: 5, overflow: 'hidden' }}>
+                    <View
+                      style={{
+                        height: '100%',
+                        width: `${Math.min(100, completedSummary?.completionPercentage ?? 100)}%`,
+                        backgroundColor: (completedSummary?.completionPercentage ?? 100) < 95 ? '#F59E0B' : '#10B981',
+                        borderRadius: 5,
+                      }}
+                    />
+                  </View>
+                  <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 4, textAlign: 'right' }}>
+                    {completedSummary?.distanceKm ?? currentDistanceKm} km completed of {completedSummary?.plannedDistanceKm ?? 4.8} km planned
                   </Text>
                 </View>
               </View>
