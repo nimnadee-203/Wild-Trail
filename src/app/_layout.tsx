@@ -22,7 +22,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="community-report" options={{ title: 'Community Reporting' }} />
-        <Stack.Screen name="community-operations" options={{ title: 'Community Operations' }} />
+        <Stack.Screen name="community-operations" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(ranger)" options={{ headerShown: false }} />
         <Stack.Screen name="(manager)" options={{ headerShown: false }} />

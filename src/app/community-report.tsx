@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -38,6 +39,20 @@ import { DateTimePicker } from '../components/community/DateTimePickerModal';
 import { DynamicDescriptionFields } from '../components/community/DynamicDescriptionFields';
 
 export default function CommunityReportScreen() {
+  const scrollRef = useRef<ScrollView>(null);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const closeSuccess = () => {
+    setSuccessVisible(false);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+  useEffect(() => {
+    if (!successVisible) return;
+    const timer = setTimeout(() => {
+      setSuccessVisible(false);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [successVisible]);
   const [kind, setKind] = useState<CommunityInput['kind']>('crop_raiding');
   const [urgentOpen, setUrgentOpen] = useState(false);
   const [urgentAnimal, setUrgentAnimal] = useState('Elephant');
@@ -156,6 +171,7 @@ export default function CommunityReportScreen() {
       );
 
       setReceipt(saved.id);
+      setSuccessVisible(true);
       setUrgentOpen(false);
       setUrgentCoords(null);
       setUrgentDirection('');
@@ -295,6 +311,7 @@ export default function CommunityReportScreen() {
       );
 
       setReceipt(saved.id);
+      setSuccessVisible(true);
       setReviewing(false);
       setPhotos([]);
       setCoords(null);
@@ -338,6 +355,26 @@ export default function CommunityReportScreen() {
     }
   };
 
+  const startAnotherReport = () => {
+    setReceipt('');
+    setReviewing(false);
+    setDescription('');
+    setPhone('');
+    setPhotos([]);
+    setCoords(null);
+    setLocationSource(null);
+    setLandmarkText('');
+    setVillage('');
+    setCustomVillage('');
+    setBoundaryOption('');
+    setCustomBoundary('');
+    setTime(getLocalDateTime());
+    setUrgentOpen(false);
+    setError('');
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+  const submittedEntry = queue.find(entry => entry.id === receipt);
+  const submittedSynced = submittedEntry ? getReportSyncStatus(submittedEntry) === 'synced' : false;
   const effective = getEffectiveValues();
 
   const pendingReports = queue.filter(
@@ -350,11 +387,14 @@ export default function CommunityReportScreen() {
   const isSimulatedOfflineState = getSimulatedOffline();
 
   return (
+    <>
     <ScrollView
+      ref={scrollRef}
       style={s.screen}
       contentContainerStyle={s.content}
       keyboardShouldPersistTaps="handled"
     >
+      {!receipt && <>
       <View style={{ gap: 4 }}>
         <Text style={s.heading}>Community Reporting</Text>
         <Text style={s.text}>
@@ -638,31 +678,38 @@ export default function CommunityReportScreen() {
         </View>
       )}
 
+      </>}
+      {!!receipt && <View style={{ gap: 12 }}>
+        <Pressable style={[s.outline, { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8 }]} onPress={startAnotherReport} accessibilityRole="button">
+          <Ionicons name="add-circle-outline" size={19} color="#245747" /><Text style={s.link}>Submit another report</Text>
+        </Pressable>
+        <Text style={s.heading}>Your report summary</Text>
+      </View>}
       {!!receipt && (
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
             gap: 6,
-            backgroundColor: isOnline ? '#DCFCE7' : '#FEF3C7',
+            backgroundColor: submittedSynced ? '#DCFCE7' : '#FEF3C7',
             padding: 10,
             borderRadius: 8,
           }}
         >
           <Ionicons
-            name={isOnline ? 'cloud-done-outline' : 'cloud-offline-outline'}
+            name={submittedSynced ? 'cloud-done-outline' : 'cloud-offline-outline'}
             size={18}
-            color={isOnline ? '#166534' : '#B45309'}
+            color={submittedSynced ? '#166534' : '#B45309'}
           />
           <Text
             style={[
               s.text,
-              { color: isOnline ? '#166534' : '#B45309', fontWeight: '600' },
+              { color: submittedSynced ? '#166534' : '#B45309', fontWeight: '600' },
             ]}
           >
-            {isOnline
+            {submittedSynced
               ? `Report submitted & synced with Operations. Reference: ${receipt}`
-              : `Saved locally (Offline) · Marked "Waiting to sync". Reference: ${receipt}`}
+              : `Saved on this device · Marked "Waiting to sync". Reference: ${receipt}`}
           </Text>
         </View>
       )}
@@ -672,7 +719,7 @@ export default function CommunityReportScreen() {
         {/* Section Header with live status and actions */}
         <View style={statusStyles.queueHeader}>
           <View>
-            <Text style={s.title}>Reports from this device</Text>
+            <Text style={s.title}>{receipt ? 'Submitted report' : 'Reports from this device'}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
               <View
                 style={[
@@ -747,7 +794,7 @@ export default function CommunityReportScreen() {
         </View>
 
         {/* Queued Reports List */}
-        {queue.map((entry) => {
+        {(receipt ? queue.filter(entry => entry.id === receipt) : queue).map((entry) => {
           const status = getReportSyncStatus(entry);
           return (
             <View style={s.card} key={entry.id}>
@@ -799,6 +846,10 @@ export default function CommunityReportScreen() {
               <Text style={[s.text, { fontSize: 13, color: '#4B5563' }]}>
                 {entry.input.description}
               </Text>
+
+              {(entry.uploadedPhotos.length > 0 || entry.localPhotos.length > 0) && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                {Array.from({ length: Math.max(entry.uploadedPhotos.length, entry.localPhotos.length) }, (_, index) => <ReportSummaryPhoto key={index} uri={entry.uploadedPhotos[index] || entry.localPhotos[index]} fallback={entry.localPhotos[index]} index={index} />)}
+              </ScrollView>}
 
               {/* Error Detail message */}
               {status === 'failed' && (
@@ -859,6 +910,15 @@ export default function CommunityReportScreen() {
         {!queue.length && <Text style={s.text}>No reports saved on this device yet.</Text>}
       </View>
     </ScrollView>
+    <Modal visible={successVisible} transparent animationType="fade" onRequestClose={closeSuccess}>
+      <View style={successStyles.overlay}><View style={successStyles.card}>
+        <View style={successStyles.icon}><Ionicons name="checkmark" size={30} color="#245747" /></View>
+        <Text style={successStyles.title}>Report saved successfully</Text>
+        <Text style={successStyles.message}>Thank you for reporting. {isCommunityOnline() ? 'Your report is being synced with Operations.' : 'It will sync when you are back online.'}</Text>
+        <Pressable style={s.button} onPress={closeSuccess} accessibilityRole="button"><Text style={s.buttonText}>Done</Text></Pressable>
+      </View></View>
+    </Modal>
+    </>
   );
 }
 
@@ -1118,4 +1178,18 @@ const urgentStyles = StyleSheet.create({
     padding: 12,
   },
   submitText: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
+});
+
+function ReportSummaryPhoto({ uri, fallback, index }: { uri: string; fallback?: string; index: number }) {
+  const [failedUri, setFailedUri] = useState<string>();
+  return <Image source={{ uri: failedUri === uri && fallback ? fallback : uri }}
+    style={{ width: 150, height: 112, borderRadius: 10, backgroundColor: '#E8EEE6' }}
+    resizeMode="cover" onError={() => setFailedUri(uri)} accessibilityLabel={`Report photo ${index + 1}`} />;
+}
+const successStyles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(10,30,20,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  card: { width: '100%', maxWidth: 360, backgroundColor: '#FFFFFF', borderRadius: 22, padding: 24, gap: 16 },
+  icon: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#E3F0E3', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+  title: { color: '#173D2D', fontSize: 20, fontWeight: '700', textAlign: 'center' },
+  message: { color: '#52675A', fontSize: 14, lineHeight: 22, textAlign: 'center' },
 });

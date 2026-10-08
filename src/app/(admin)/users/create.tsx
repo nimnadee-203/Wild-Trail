@@ -1,3 +1,4 @@
+import { goBackOrReplace } from '../../../utils/navigation';
 import React, { useState } from 'react';
 import {
   View,
@@ -78,7 +79,7 @@ export default function CreateStaffScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => goBackOrReplace('/(admin)/users')} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add Staff Member</Text>
