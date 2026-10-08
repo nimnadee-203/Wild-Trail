@@ -1,3 +1,6 @@
+import { useRangerIdentity } from '../../hooks/useRangerIdentity';
+import { RangerAvatar } from '../../components/RangerAvatar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WildTrailBrand } from '../../components/WildTrailBrand';
 import React, { useState, useCallback } from 'react';
 import {
@@ -5,9 +8,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
-  Image,
   StatusBar,
   Alert,
   Platform,
@@ -24,6 +25,7 @@ import { offlineSyncService } from '../../services/api/offlineSync';
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const identity = useRangerIdentity();
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [assignedPatrols, setAssignedPatrols] = useState<AssignedPatrol[]>(MOCK_ASSIGNED_PATROLS);
   const [showAllPatrols, setShowAllPatrols] = useState(false);
@@ -105,8 +107,8 @@ export default function DashboardScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar backgroundColor="#0F1D17" barStyle="light-content" />
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <StatusBar backgroundColor="#FAFBF7" barStyle="dark-content" />
 
       {/* Top Application Header (Dark WildGuard Header) */}
       <View style={styles.darkHeader}>
@@ -115,7 +117,7 @@ export default function DashboardScreen() {
         </View>
 
         <TouchableOpacity style={styles.syncedPillBtn} activeOpacity={0.8}>
-          <Ionicons name="sync-outline" size={15} color="#A7F3D0" />
+          <Ionicons name="sync-outline" size={15} color="#FFFFFF" />
           <Text style={styles.syncedPillText}>Synced</Text>
         </TouchableOpacity>
       </View>
@@ -123,12 +125,7 @@ export default function DashboardScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* On-Duty Ranger Profile Card */}
         <View style={styles.rangerProfileCard}>
-          <Image
-            source={{
-              uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=250&q=80',
-            }}
-            style={styles.rangerAvatar}
-          />
+          <RangerAvatar name={identity.name} uri={identity.photo} />
           <View style={styles.rangerProfileInfo}>
             <View style={styles.rangerLabelRow}>
               <Text style={styles.rangerProfileLabel}>ON-DUTY RANGER</Text>
@@ -155,7 +152,7 @@ export default function DashboardScreen() {
                 <Text style={styles.rangerStatusText}>{rangerStatus.replace(/_/g, ' ')}</Text>
               </View>
             </View>
-            <Text style={styles.rangerProfileName}>Ranger Nimal</Text>
+            <Text style={styles.rangerProfileName}>{identity.name}</Text>
           </View>
         </View>
 
@@ -200,10 +197,10 @@ export default function DashboardScreen() {
                     size={11}
                     color={
                       patrol.status === 'COMPLETED'
-                        ? '#4ADE80'
+                        ? '#3B7563'
                         : patrol.status === 'IN_PROGRESS'
-                          ? '#60A5FA'
-                          : '#FBBF24'
+                          ? '#286487'
+                          : '#94611B'
                     }
                   />
                   <Text
@@ -226,7 +223,7 @@ export default function DashboardScreen() {
                 onPress={() => setSelectedPatrol(patrol)}
                 activeOpacity={0.8}
               >
-                <Ionicons name="eye-outline" size={15} color="#4ADE80" />
+                <Ionicons name="eye-outline" size={15} color="#3B7563" />
                 <Text style={styles.viewPatrolBtnText}>View</Text>
               </TouchableOpacity>
             </View>
@@ -244,7 +241,7 @@ export default function DashboardScreen() {
             <View style={styles.patrolFieldGroup}>
               <Text style={styles.patrolFieldLabel}>SCHEDULE WINDOW</Text>
               <View style={styles.scheduleRow}>
-                <Ionicons name="time-outline" size={18} color="#FFFFFF" />
+                <Ionicons name="time-outline" size={18} color="#304C3D" />
                 <Text style={styles.scheduleText}>
                   {patrol.startTime} ({patrol.duration} hrs) • {patrol.date}
                 </Text>
@@ -259,10 +256,10 @@ export default function DashboardScreen() {
                   style={[
                     styles.cardProgressPctText,
                     (patrol.completionPercentage ?? 0) > 0 && (patrol.completionPercentage ?? 0) < 95
-                      ? { color: '#F59E0B' }
+                      ? { color: '#A16B24' }
                       : (patrol.completionPercentage ?? 0) >= 95
-                        ? { color: '#4ADE80' }
-                        : { color: '#9CA3AF' },
+                        ? { color: '#3B7563' }
+                        : { color: '#839087' },
                   ]}
                 >
                   {patrol.status === 'COMPLETED'
@@ -285,8 +282,8 @@ export default function DashboardScreen() {
                         }%`,
                       backgroundColor:
                         (patrol.completionPercentage ?? 0) > 0 && (patrol.completionPercentage ?? 0) < 95
-                          ? '#F59E0B'
-                          : '#4ADE80',
+                          ? '#A16B24'
+                          : '#3B7563',
                     },
                   ]}
                 />
@@ -315,7 +312,7 @@ export default function DashboardScreen() {
             <Ionicons
               name={showAllPatrols ? 'chevron-up' : 'chevron-down'}
               size={18}
-              color="#4ADE80"
+              color="#3B7563"
             />
           </TouchableOpacity>
         )}
@@ -339,7 +336,7 @@ export default function DashboardScreen() {
               <View
                 style={[
                   styles.greenStatusDot,
-                  pendingSyncCount > 0 && { backgroundColor: '#F59E0B' },
+                  pendingSyncCount > 0 && { backgroundColor: '#A16B24' },
                 ]}
               />
               <Text style={styles.statusCardLabel}>OFFLINE SYNC</Text>
@@ -347,7 +344,7 @@ export default function DashboardScreen() {
             <Text
               style={[
                 styles.statusCardValue,
-                pendingSyncCount > 0 && { color: '#F59E0B' },
+                pendingSyncCount > 0 && { color: '#A16B24' },
               ]}
             >
               {pendingSyncCount > 0 ? `${pendingSyncCount} PENDING_SYNC` : 'SUBMITTED / OK'}
@@ -393,7 +390,7 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => router.push('/report-incident')}
+            onPress={() => router.push('/(ranger)/report-incident')}
             activeOpacity={0.85}
           >
             <View style={[styles.actionIconWrap, { backgroundColor: '#FEF3C7' }]}>
@@ -432,7 +429,7 @@ export default function DashboardScreen() {
 
         <TouchableOpacity
           style={styles.reportIncidentBtn}
-          onPress={() => router.push('/report-incident' as any)}
+          onPress={() => router.push('/(ranger)/report-incident')}
           activeOpacity={0.85}
         >
           <View style={styles.reportIncidentIcon}>
@@ -453,7 +450,7 @@ export default function DashboardScreen() {
         <View style={styles.shiftCard}>
           <View style={styles.shiftHeader}>
             <Ionicons name="person-circle-outline" size={24} color={Colors.light.primaryDark} />
-            <Text style={styles.shiftTitle}>Duty Officer: RANGER-409 (Meranga)</Text>
+            <Text style={styles.shiftTitle}>Duty Officer: {identity.badge} ({identity.name})</Text>
           </View>
           <Text style={styles.shiftText}>
             Assigned: Sector 4 Southern Boundary • Base Radio VHF Channel 12 • SOS Emergency Active
@@ -473,7 +470,7 @@ export default function DashboardScreen() {
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderTitleRow}>
-                <Ionicons name="shield-checkmark" size={22} color="#4ADE80" />
+                <Ionicons name="shield-checkmark" size={22} color="#3B7563" />
                 <Text style={styles.modalTitle}>Patrol Details</Text>
               </View>
               <TouchableOpacity
@@ -481,7 +478,7 @@ export default function DashboardScreen() {
                 style={styles.modalCloseBtn}
                 activeOpacity={0.7}
               >
-                <Ionicons name="close" size={22} color="#9CA3AF" />
+                <Ionicons name="close" size={22} color="#839087" />
               </TouchableOpacity>
             </View>
 
@@ -528,15 +525,15 @@ export default function DashboardScreen() {
                 </View>
 
                 {/* Progress Bar inside Modal */}
-                <View style={[styles.cardProgressContainer, { backgroundColor: '#112119', marginBottom: 16 }]}>
+                <View style={[styles.cardProgressContainer, { backgroundColor: '#F0F4EB', marginBottom: 16 }]}>
                   <View style={styles.cardProgressHeader}>
                     <Text style={styles.cardProgressLabel}>COMPLETION METRIC</Text>
                     <Text
                       style={[
                         styles.cardProgressPctText,
                         (selectedPatrol.completionPercentage ?? 0) > 0 && (selectedPatrol.completionPercentage ?? 0) < 95
-                          ? { color: '#F59E0B' }
-                          : { color: '#4ADE80' },
+                          ? { color: '#A16B24' }
+                          : { color: '#3B7563' },
                       ]}
                     >
                       {selectedPatrol.status === 'COMPLETED'
@@ -555,8 +552,8 @@ export default function DashboardScreen() {
                             }%`,
                           backgroundColor:
                             (selectedPatrol.completionPercentage ?? 0) > 0 && (selectedPatrol.completionPercentage ?? 0) < 95
-                              ? '#F59E0B'
-                              : '#4ADE80',
+                              ? '#A16B24'
+                              : '#3B7563',
                         },
                       ]}
                     />
@@ -572,7 +569,7 @@ export default function DashboardScreen() {
                 <View style={styles.mapboxMapContainer}>
                   <View style={styles.mapboxHeaderRow}>
                     <View style={styles.mapboxTag}>
-                      <Ionicons name="map-outline" size={13} color="#4ADE80" />
+                      <Ionicons name="map-outline" size={13} color="#3B7563" />
                       <Text style={styles.mapboxTagText}>MAPBOX ASSIGNED ROUTE</Text>
                     </View>
                     <Text style={styles.mapboxDistText}>
@@ -610,8 +607,8 @@ export default function DashboardScreen() {
             <View style={styles.modalFooter}>
               {selectedPatrol?.status === 'COMPLETED' ? (
                 <View style={[styles.startPatrolModalBtn, styles.completedPatrolModalBtn]}>
-                  <Ionicons name="checkmark-circle" size={18} color="#4ADE80" />
-                  <Text style={[styles.startPatrolModalBtnText, { color: '#4ADE80' }]}>
+                  <Ionicons name="checkmark-circle" size={18} color="#3B7563" />
+                  <Text style={[styles.startPatrolModalBtnText, { color: '#3B7563' }]}>
                     Patrol Completed
                   </Text>
                 </View>
@@ -648,88 +645,92 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0C1812',
+    backgroundColor: '#F5F6F0',
   },
 
   // Dark WildGuard Header Bar
   darkHeader: {
-    backgroundColor: '#0F1D17',
-    paddingHorizontal: 16,
+    backgroundColor: '#245747',
+    paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? 12 : 10,
     paddingBottom: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: '#3B6A58',
   },
   darkHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   shieldIconWrap: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#1C3529',
+    backgroundColor: '#EBF3ED',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#294B3B',
+    borderColor: '#DDE5D9',
   },
   darkHeaderTitle: {
     fontSize: 19,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#304C3D',
     letterSpacing: 0.5,
   },
   darkHeaderSubtitle: {
     fontSize: 12,
-    color: '#8EA69A',
+    color: '#748078',
     fontWeight: '500',
     marginTop: 1,
   },
   syncedPillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1C3529',
+    backgroundColor: '#3B6A58',
     borderWidth: 1,
-    borderColor: '#294B3B',
+    borderColor: '#527F69',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     gap: 5,
   },
   syncedPillText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#A7F3D0',
+    color: '#FFFFFF',
   },
 
   // Scroll Container
   scroll: {
-    padding: 16,
-    paddingBottom: 28,
+    padding: 20,
+    paddingBottom: 32,
+    alignSelf: 'center',
+    maxWidth: 760,
+    width: '100%',
   },
 
   // Ranger Profile Card
   rangerProfileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#16271F',
-    borderRadius: 16,
+    backgroundColor: '#EDF3E8',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#223B2E',
-    padding: 14,
-    marginBottom: 12,
+    borderColor: '#DEE7D6',
+    padding: 18,
+    marginBottom: 18,
   },
   rangerAvatar: {
     width: 52,
     height: 52,
     borderRadius: 26,
     borderWidth: 2,
-    borderColor: '#4ADE80',
+    borderColor: '#3B7563',
     marginRight: 14,
   },
   rangerProfileInfo: {
@@ -740,32 +741,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   rangerProfileLabel: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 0.8,
-    color: '#8EA69A',
+    letterSpacing: 1.3,
+    color: '#748078',
   },
   rangerStatusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
     borderRadius: 12,
     borderWidth: 1,
     gap: 4,
   },
   rangerStatusAvailable: {
-    backgroundColor: 'rgba(74, 222, 128, 0.15)',
-    borderColor: '#4ADE80',
+    backgroundColor: '#EBF3ED',
+    borderColor: '#3B7563',
   },
   rangerStatusOnPatrol: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    borderColor: '#F59E0B',
+    backgroundColor: '#FBF0DC',
+    borderColor: '#A16B24',
   },
   rangerStatusResponding: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    backgroundColor: '#FCECE7',
     borderColor: '#EF4444',
   },
   rangerStatusDot: {
@@ -774,10 +777,10 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   rangerDotAvailable: {
-    backgroundColor: '#4ADE80',
+    backgroundColor: '#3B7563',
   },
   rangerDotOnPatrol: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#A16B24',
   },
   rangerDotResponding: {
     backgroundColor: '#EF4444',
@@ -785,49 +788,58 @@ const styles = StyleSheet.create({
   rangerStatusText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#304C3D',
     letterSpacing: 0.5,
   },
   rangerProfileName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginTop: 2,
+    fontSize: 23,
+    fontWeight: '700',
+    color: '#304C3D',
+    marginTop: 7,
+    letterSpacing: -0.4,
   },
 
   // Assigned Patrol Card
   assignedPatrolCard: {
-    backgroundColor: '#16271F',
-    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#244234',
-    padding: 18,
-    marginBottom: 12,
+    borderColor: '#E2E8DE',
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#193D30',
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 10,
   },
   assignedPatrolHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
+    gap: 10,
+    flexWrap: 'wrap',
   },
   badgeAndStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
   assignedPatrolBadge: {
-    backgroundColor: '#20392C',
+    backgroundColor: '#EBF3ED',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#2B4D3C',
+    borderColor: '#DDE5D9',
   },
   assignedPatrolBadgeText: {
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.8,
-    color: '#A7F3D0',
+    color: '#245747',
   },
   priorityTag: {
     paddingHorizontal: 8,
@@ -835,24 +847,24 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   priorityTagHigh: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    backgroundColor: '#FCECE7',
     borderWidth: 1,
     borderColor: '#EF4444',
   },
   priorityTagMedium: {
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    backgroundColor: '#FBF0DC',
     borderWidth: 1,
-    borderColor: '#F59E0B',
+    borderColor: '#A16B24',
   },
   priorityTagLow: {
-    backgroundColor: 'rgba(74, 222, 128, 0.2)',
+    backgroundColor: '#EBF3ED',
     borderWidth: 1,
-    borderColor: '#4ADE80',
+    borderColor: '#3B7563',
   },
   priorityTagText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#304C3D',
     letterSpacing: 0.5,
   },
   statusTag: {
@@ -865,16 +877,16 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statusTagCompleted: {
-    backgroundColor: 'rgba(74, 222, 128, 0.15)',
-    borderColor: '#4ADE80',
+    backgroundColor: '#EBF3ED',
+    borderColor: '#3B7563',
   },
   statusTagInProgress: {
-    backgroundColor: 'rgba(96, 165, 250, 0.15)',
-    borderColor: '#60A5FA',
+    backgroundColor: '#E8F2F8',
+    borderColor: '#286487',
   },
   statusTagAssigned: {
     backgroundColor: 'rgba(251, 191, 36, 0.15)',
-    borderColor: '#FBBF24',
+    borderColor: '#94611B',
   },
   statusTagText: {
     fontSize: 10,
@@ -882,32 +894,34 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   statusTagTextCompleted: {
-    color: '#4ADE80',
+    color: '#3B7563',
   },
   statusTagTextInProgress: {
-    color: '#60A5FA',
+    color: '#286487',
   },
   statusTagTextAssigned: {
-    color: '#FBBF24',
+    color: '#94611B',
   },
   cardProgressContainer: {
-    marginTop: 14,
-    backgroundColor: '#101E17',
-    padding: 12,
-    borderRadius: 12,
+    marginTop: 18,
+    backgroundColor: '#F5F7F1',
+    padding: 14,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1D3629',
+    borderColor: '#E2E8DE',
   },
   cardProgressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 6,
+    flexWrap: 'wrap',
+    gap: 6,
   },
   cardProgressLabel: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#8EA69A',
+    color: '#748078',
     letterSpacing: 0.8,
   },
   cardProgressPctText: {
@@ -917,7 +931,7 @@ const styles = StyleSheet.create({
   },
   cardProgressBarTrack: {
     height: 8,
-    backgroundColor: '#1E362A',
+    backgroundColor: '#E2E8DE',
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -927,20 +941,20 @@ const styles = StyleSheet.create({
   },
   cardProgressSubtext: {
     fontSize: 11,
-    color: '#8EA69A',
+    color: '#748078',
     marginTop: 5,
   },
   completedPatrolModalBtn: {
-    backgroundColor: 'rgba(74, 222, 128, 0.12)',
-    borderColor: '#4ADE80',
+    backgroundColor: '#EBF3ED',
+    borderColor: '#3B7563',
     borderWidth: 1,
   },
   viewPatrolBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#20392C',
+    backgroundColor: '#EBF3ED',
     borderWidth: 1,
-    borderColor: '#2B4D3C',
+    borderColor: '#DDE5D9',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -949,15 +963,15 @@ const styles = StyleSheet.create({
   viewPatrolBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#4ADE80',
+    color: '#3B7563',
   },
   showAllPatrolsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#16271F',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#223B2E',
+    borderColor: '#E2E8DE',
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -967,28 +981,29 @@ const styles = StyleSheet.create({
   showAllPatrolsText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#4ADE80',
+    color: '#3B7563',
   },
   patrolFieldGroup: {
-    marginTop: 10,
+    marginTop: 14,
   },
   patrolFieldLabel: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 0.8,
-    color: '#8EA69A',
+    letterSpacing: 1.2,
+    color: '#748078',
   },
   patrolFieldValueMain: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginTop: 3,
+    fontSize: 21,
+    fontWeight: '700',
+    color: '#304C3D',
+    marginTop: 5,
   },
   patrolFieldValueSub: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginTop: 3,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#304C3D',
+    marginTop: 5,
+    lineHeight: 23,
   },
   scheduleRow: {
     flexDirection: 'row',
@@ -997,10 +1012,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   scheduleText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#304C3D',
+    fontFamily: 'System',
+    flexShrink: 1,
+    lineHeight: 20,
   },
 
   // Modal Styles
@@ -1014,10 +1031,10 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '100%',
     maxHeight: '82%',
-    backgroundColor: '#16271F',
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#294B3B',
+    borderColor: '#DDE5D9',
     padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -1031,7 +1048,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#223B2E',
+    borderBottomColor: '#E2E8DE',
     marginBottom: 14,
   },
   modalHeaderTitleRow: {
@@ -1042,13 +1059,13 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#304C3D',
   },
   modalCloseBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#20392C',
+    backgroundColor: '#EBF3ED',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1064,12 +1081,12 @@ const styles = StyleSheet.create({
   modalRouteTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#304C3D',
   },
   modalPatrolIdText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#4ADE80',
+    color: '#3B7563',
     marginTop: 2,
   },
   modalDetailGroup: {
@@ -1079,31 +1096,31 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.8,
-    color: '#8EA69A',
+    color: '#748078',
   },
   modalDetailValue: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#304C3D',
     marginTop: 2,
   },
   modalNotesValue: {
     fontSize: 14,
-    color: '#A7F3D0',
+    color: '#245747',
     marginTop: 4,
     lineHeight: 20,
-    backgroundColor: '#0F1D17',
+    backgroundColor: '#FAFBF7',
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#223B2E',
+    borderColor: '#E2E8DE',
   },
   // Mapbox Route Preview Styles
   mapboxMapContainer: {
-    backgroundColor: '#0F1D17',
+    backgroundColor: '#FAFBF7',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#294B3B',
+    borderColor: '#DDE5D9',
     padding: 12,
     marginVertical: 12,
   },
@@ -1122,12 +1139,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.8,
-    color: '#4ADE80',
+    color: '#3B7563',
   },
   mapboxDistText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#8EA69A',
+    color: '#748078',
   },
   mapboxMapWrapper: {
     height: 220,
@@ -1137,17 +1154,17 @@ const styles = StyleSheet.create({
   },
   mapboxCanvas: {
     height: 150,
-    backgroundColor: '#162C21',
+    backgroundColor: '#F0F4EB',
     borderRadius: 10,
     position: 'relative',
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#223B2E',
+    borderColor: '#E2E8DE',
   },
   mapTerrainGrid: {
     ...StyleSheet.absoluteFill,
     opacity: 0.15,
-    backgroundColor: '#0F1D17',
+    backgroundColor: '#FAFBF7',
   },
   routePolylineSegment1: {
     position: 'absolute',
@@ -1155,7 +1172,7 @@ const styles = StyleSheet.create({
     left: '22%',
     width: '32%',
     height: 3,
-    backgroundColor: '#4ADE80',
+    backgroundColor: '#3B7563',
     transform: [{ rotate: '-25deg' }],
   },
   routePolylineSegment2: {
@@ -1164,7 +1181,7 @@ const styles = StyleSheet.create({
     left: '52%',
     width: '30%',
     height: 3,
-    backgroundColor: '#4ADE80',
+    backgroundColor: '#3B7563',
     transform: [{ rotate: '-35deg' }],
   },
   mapMarkerPin: {
@@ -1200,17 +1217,17 @@ const styles = StyleSheet.create({
   markerText: {
     fontSize: 9,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#304C3D',
   },
   markerCoordSub: {
     fontSize: 9,
-    color: '#A7F3D0',
+    color: '#245747',
     marginTop: 2,
     fontWeight: '600',
   },
   modalRouteCoordText: {
     fontSize: 13,
-    color: '#A7F3D0',
+    color: '#245747',
     marginTop: 4,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
@@ -1237,27 +1254,27 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#223B2E',
+    borderColor: '#E2E8DE',
   },
   closeModalBtnText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#9CA3AF',
+    color: '#839087',
   },
 
   // System Status Grid
   statusGridRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 22,
   },
   statusCard: {
     flex: 1,
-    backgroundColor: '#16271F',
-    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#223B2E',
-    padding: 14,
+    borderColor: '#E2E8DE',
+    padding: 16,
   },
   statusCardHeader: {
     flexDirection: 'row',
@@ -1268,19 +1285,19 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4ADE80',
+    backgroundColor: '#3B7563',
   },
   statusCardLabel: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 0.8,
-    color: '#8EA69A',
+    letterSpacing: 1.1,
+    color: '#748078',
   },
   statusCardValue: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginTop: 6,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#304C3D',
+    marginTop: 10,
   },
   alertBannerTop: {
     flexDirection: 'row',
@@ -1360,7 +1377,7 @@ const styles = StyleSheet.create({
   animalName: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: '#304C3D',
   },
   riskBadge: {
     backgroundColor: '#DC2626',
@@ -1454,28 +1471,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    marginTop: 6,
-    marginBottom: 12,
+    marginTop: 14,
+    marginBottom: 16,
+    gap: 6,
+    flexWrap: 'wrap',
   },
   // Incident reporting entry point
   reportIncidentBtn: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.light.primaryDark,
-    padding: 12,
-    marginBottom: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#DEE6D8',
+    padding: 16,
+    marginBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 76,
   },
   reportIncidentIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#EAF5EC',
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#EDF3E8',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 12,
   },
   reportIncidentText: {
     flex: 1,
@@ -1483,12 +1503,14 @@ const styles = StyleSheet.create({
   reportIncidentTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.light.primaryDark,
+    color: '#304C3D',
+    lineHeight: 21,
   },
   reportIncidentSubtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: Colors.light.muted,
-    marginTop: 3,
+    marginTop: 4,
+    lineHeight: 19,
   },
   // Recent Alerts
   recentSection: {
@@ -1499,18 +1521,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#304C3D',
+    letterSpacing: -0.3,
   },
   sectionSubtitle: {
-    fontSize: 12,
-    color: '#8EA69A',
+    fontSize: 11,
+    color: '#748078',
     fontWeight: '500',
   },
   seeAllText: {
     fontSize: 13,
-    color: '#4ADE80',
+    color: '#3B7563',
     fontWeight: '700',
   },
 
@@ -1518,41 +1541,42 @@ const styles = StyleSheet.create({
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 18,
   },
   actionCard: {
     flex: 1,
-    minWidth: '47%',
+    minWidth: '45%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 18,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderColor: '#E2E8DE',
+    shadowColor: '#193D30',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 0,
   },
   actionIconWrap: {
     width: 44,
     height: 44,
-    borderRadius: 10,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 14,
   },
   actionTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: '#304C3D',
+    lineHeight: 21,
   },
   actionDesc: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginTop: 2,
-    lineHeight: 15,
+    fontSize: 12,
+    color: '#748078',
+    marginTop: 6,
+    lineHeight: 19,
   },
 
   // Recent Alerts List
@@ -1590,7 +1614,7 @@ const styles = StyleSheet.create({
   recentAlertName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: '#304C3D',
   },
   recentAlertSpecies: {
     fontSize: 12,
@@ -1609,7 +1633,7 @@ const styles = StyleSheet.create({
   },
   metaDivider: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#839087',
     marginHorizontal: 5,
   },
   recentAlertTime: {
@@ -1635,32 +1659,34 @@ const styles = StyleSheet.create({
   levelBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#304C3D',
   },
 
   // Shift info card
   shiftCard: {
-    backgroundColor: '#F0FDF4',
-    borderRadius: 12,
+    backgroundColor: '#EDF3E8',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
-    padding: 14,
-    marginTop: 10,
+    borderColor: '#DEE7D6',
+    padding: 18,
+    marginTop: 8,
   },
   shiftHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 8,
   },
   shiftTitle: {
     fontSize: 13,
     fontWeight: '700',
     color: Colors.light.primaryDark,
+    lineHeight: 20,
+    flex: 1,
   },
   shiftText: {
     fontSize: 12,
-    color: '#166534',
-    lineHeight: 17,
+    color: '#687B70',
+    lineHeight: 20,
   },
 });

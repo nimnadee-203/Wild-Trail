@@ -22,13 +22,24 @@ export function SignInForm({ email, password, busy, onEmail, onPassword, onSignI
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
         <View style={s.content}>
           <View style={s.brand}>
-            <Image source={require('../../../assets/images/WildTrailLogo.jpg')} style={s.logo} resizeMode="contain" accessibilityLabel="WildTrail, Department of Wildlife Conservation" />
-            <Text style={s.eyebrow}>WILDLIFE PROTECTION & CONSERVATION</Text>
+            <Image source={require('../../../assets/images/wildlife/elephant.jpg')} style={s.heroPhoto} resizeMode="cover" accessibilityLabel="Elephant in Sri Lanka's grasslands" />
+            <View style={s.heroShade} />
+            <View style={s.heroContent}>
+              <View style={s.brandRow}>
+                <View style={s.logoFrame}><Image source={require('../../../assets/images/WildTrailLogo.jpg')} style={s.logo} resizeMode="contain" accessibilityLabel="WildTrail logo" /></View>
+                <View style={s.brandCopy}><Text style={s.brandName}>WildTrail</Text><Text style={s.eyebrow}>WILDLIFE PROTECTION & CONSERVATION</Text></View>
+              </View>
+              <View style={s.departmentCopy}>
+                <Text style={s.country}>SRI LANKA</Text>
+                <Text style={s.department}>Department of Wildlife Conservation</Text>
+                <Text style={s.heroCaption}>Protecting our wildlife. Connecting our people.</Text>
+              </View>
+            </View>
           </View>
           <View style={s.card}>
             <View style={s.header}>
               <View style={s.badge}><Ionicons name="shield-checkmark-outline" size={22} color="#245747" /></View>
-              <View style={{ flex: 1 }}><Text style={s.heading}>Welcome back</Text><Text style={s.subtitle}>Sign in to your staff account</Text></View>
+              <View style={{ flex: 1 }}><Text style={s.heading}>Welcome back</Text><Text style={s.subtitle}>Sign in to your WildTrail workspace</Text></View>
             </View>
             <Input label="Email address" accessibilityLabel="Email address" placeholder="you@wildguard.org" value={email} onChangeText={onEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" editable={!busy} style={s.input} />
             <View>
@@ -65,11 +76,22 @@ export function SignInForm({ email, password, busy, onEmail, onPassword, onSignI
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F5F6F0' },
-  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 28 },
+  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 20 },
   content: { width: '100%', maxWidth: 460, alignSelf: 'center', gap: 20 },
-  brand: { alignItems: 'center', gap: 12 },
-  logo: { width: 158, height: 174, borderRadius: 18 },
-  eyebrow: { fontSize: 10, fontWeight: '700', letterSpacing: 1.7, color: '#61716A', textAlign: 'center' },
+  brand: { borderRadius: 22, overflow: 'hidden', backgroundColor: '#245747' },
+  heroPhoto: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%' },
+  heroShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(15, 45, 31, 0.70)' },
+  heroContent: { padding: 22, gap: 30 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  logoFrame: { backgroundColor: '#FFFFFF', padding: 5, borderRadius: 12 },
+  logo: { width: 43, height: 48, borderRadius: 7 },
+  brandCopy: { flex: 1, gap: 5 },
+  brandName: { color: '#FFFFFF', fontSize: 22, fontWeight: '800', letterSpacing: 0.3 },
+  eyebrow: { fontSize: 8, lineHeight: 13, fontWeight: '600', letterSpacing: 1.2, color: '#D0DFD4' },
+  departmentCopy: { gap: 9 },
+  country: { fontSize: 10, fontWeight: '700', letterSpacing: 2.7, color: '#D5E5C0' },
+  department: { fontSize: 24, lineHeight: 31, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.4 },
+  heroCaption: { fontSize: 12, lineHeight: 19, color: '#E2EBDD' },
   card: { backgroundColor: '#FFFFFF', borderRadius: 22, padding: 24, borderWidth: 1, borderColor: '#E2E8DF', boxShadow: '0px 8px 28px rgba(30, 65, 49, 0.06)' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   badge: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#EDF3EC', alignItems: 'center', justifyContent: 'center' },
