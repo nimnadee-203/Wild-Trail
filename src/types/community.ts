@@ -26,6 +26,7 @@ export interface CommunityInput {
 
 export interface QueuedCommunityReport {
   id: string;
+  collection?: 'communityReports' | 'incidents';
   input: CommunityInput;
   localPhotos: string[];
   uploadedPhotos: string[];
