@@ -3,9 +3,11 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { APP_CONFIG } from '../../constants/config';
@@ -44,6 +46,8 @@ function MapPickerModalContent({
   onConfirm: (coords: LocationCoords) => void;
   onClose: () => void;
 }) {
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const isCompact = windowWidth < 600 || windowHeight < 700;
   const [selectedPin, setSelectedPin] = useState<LocationCoords>(() => ({
     latitude: initialCoords?.latitude ?? APP_CONFIG.defaultCoordinates.latitude,
     longitude: initialCoords?.longitude ?? APP_CONFIG.defaultCoordinates.longitude,
@@ -167,7 +171,14 @@ function MapPickerModalContent({
 
   return (
     <View style={styles.modalOverlay}>
-      <View style={styles.modalContent}>
+      <ScrollView
+        style={[
+          styles.modalContent,
+          isCompact && styles.compactModalContent,
+          { maxHeight: windowHeight - 24 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTitleRow}>
@@ -210,7 +221,7 @@ function MapPickerModalContent({
         </View>
 
         {/* Map Container */}
-        <View style={styles.mapWrapper}>
+        <View style={[styles.mapWrapper, isCompact && styles.compactMapWrapper]}>
           {Platform.OS === 'web' ? (
             <div
               ref={containerRef}
@@ -256,7 +267,7 @@ function MapPickerModalContent({
             <Text style={styles.confirmBtnText}>Confirm Location</Text>
           </Pressable>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -301,6 +312,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
+  },
+  compactModalContent: {
+    padding: 12,
+    gap: 8,
   },
   header: {
     flexDirection: 'row',
@@ -364,6 +379,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     overflow: 'hidden',
     position: 'relative',
+  },
+  compactMapWrapper: {
+    height: 240,
   },
   mobileFallback: {
     flex: 1,
