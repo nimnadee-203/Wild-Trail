@@ -1,33 +1,33 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { WildTrailBrand } from '../../components/WildTrailBrand';
-import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Platform,
   Alert,
   Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Button, Card, Badge } from '../../components/ui';
-import { useLocation } from '../../hooks/useLocation';
-import { formatCoordinates } from '../../utils/formatting';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Badge, Button, Card } from '../../components/ui';
+import { WildTrailBrand } from '../../components/WildTrailBrand';
 import Colors from '../../constants/colors';
-import { patrolApiService } from '../../services/api/patrols';
+import { useLocation } from '../../hooks/useLocation';
 import { offlineSyncService, SyncItemStatus } from '../../services/api/offlineSync';
+import { patrolApiService } from '../../services/api/patrols';
 import {
   ActualPathPoint,
-  MarkedWaypoint,
-  WaypointType,
-  PatrolObservation,
-  ObservationType,
   CompletedPatrolSummary,
+  MarkedWaypoint,
+  ObservationType,
+  PatrolObservation,
+  WaypointType,
 } from '../../types/patrol';
+import { formatCoordinates } from '../../utils/formatting';
 
 const WAYPOINT_TYPES: { type: WaypointType; label: string; icon: string; color: string }[] = [
   { type: 'OBSERVATION', label: 'Observation', icon: 'eye-outline', color: '#0284C7' },
@@ -62,9 +62,9 @@ function calculatePathDistance(path: ActualPathPoint[]): number {
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     totalKm += R * c;
   }
@@ -287,7 +287,7 @@ export default function PatrolScreen() {
   const handleSaveWaypoint = async () => {
     const now = new Date();
     const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    
+
     const currentLat = location?.latitude ?? actualPath[actualPath.length - 1]?.latitude ?? 6.3672;
     const currentLng = location?.longitude ?? actualPath[actualPath.length - 1]?.longitude ?? 81.503;
 
