@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Alert, Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button, Input, Card } from '../../components/ui';
-import Colors from '../../constants/colors';
+import { SignInForm } from '../../components/auth/SignInForm';
+
 import { userService } from '../../services/api/users';
 import { UserRole } from '../../types/user';
 
@@ -54,106 +54,5 @@ export default function LoginScreen() {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.heading}>Wildlife Protection System</Text>
-        <Text style={styles.subheading}>Staff & Operations Portal Login</Text>
-
-        <Card style={styles.card}>
-          <Input
-            label="Email"
-            placeholder="e.g. admin@wildguard.org or nimal@wildguard.org"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-
-          <Input
-            label="Password"
-            placeholder="••••••••"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-
-          <Button
-            title="Login"
-            onPress={handleLogin}
-            isLoading={isLoading}
-            style={styles.loginBtn}
-          />
-
-          {/* Quick Demo Credentials Assistant */}
-          <View style={styles.demoBox}>
-            <Text style={styles.demoTitle}>DEMO QUICK LOGIN TEST ACCOUNTS:</Text>
-            <Text style={styles.demoText} onPress={() => { setEmail('admin@wildguard.org'); setPassword('WildGuard2026!'); }}>
-              🔑 Admin: admin@wildguard.org
-            </Text>
-            <Text style={styles.demoText} onPress={() => { setEmail('nimal@wildguard.org'); setPassword('WildGuard2026!'); }}>
-              🔑 Ranger: nimal@wildguard.org
-            </Text>
-            <Text style={styles.demoText} onPress={() => { setEmail('manager@wildguard.org'); setPassword('WildGuard2026!'); }}>
-              🔑 Manager: manager@wildguard.org
-            </Text>
-            <Text style={styles.demoText} onPress={() => { setEmail('liaison@wildguard.org'); setPassword('WildGuard2026!'); }}>
-              🔑 Liaison: liaison@wildguard.org
-            </Text>
-          </View>
-        </Card>
-      </View>
-    </SafeAreaView>
-  );
+  return <SignInForm email={email} password={password} busy={isLoading} onEmail={setEmail} onPassword={setPassword} onSignIn={handleLogin} onCommunity={() => router.push('/community-report')} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  content: {
-    padding: 20,
-    justifyContent: 'center',
-    flex: 1,
-  },
-  heading: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.light.primaryDark,
-    textAlign: 'center',
-  },
-  subheading: {
-    fontSize: 14,
-    color: Colors.light.muted,
-    textAlign: 'center',
-    marginBottom: 24,
-    marginTop: 4,
-  },
-  card: {
-    padding: 20,
-  },
-  loginBtn: {
-    marginTop: 16,
-  },
-  demoBox: {
-    marginTop: 20,
-    padding: 12,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 4,
-  },
-  demoTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#64748B',
-    marginBottom: 2,
-  },
-  demoText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.light.primaryDark,
-  },
-});

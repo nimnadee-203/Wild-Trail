@@ -1,3 +1,4 @@
+import { WildTrailBrand } from '../../components/WildTrailBrand';
 import React, { useState } from 'react';
 import {
   View,
@@ -95,7 +96,7 @@ export default function MapScreen() {
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>{isResponding ? 'Responding to Alert' : 'Live Wildlife Map'}</Text>
+            <WildTrailBrand light title={isResponding ? 'Responding to Alert' : 'Live Wildlife Map'} />
             <Text style={styles.headerSubtitle}>{isResponding ? '' : 'Sector 4 GPS Radar • 14 Collars'}</Text>
           </View>
         </View>

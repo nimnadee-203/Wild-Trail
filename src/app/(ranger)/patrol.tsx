@@ -1,3 +1,4 @@
+import { WildTrailBrand } from '../../components/WildTrailBrand';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -384,7 +385,7 @@ export default function PatrolScreen() {
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>{patrolId ? `Patrol: ${patrolId}` : 'GPS Patrol Tracking'}</Text>
+            <WildTrailBrand light title={patrolId ? `Patrol: ${patrolId}` : 'GPS Patrol Tracking'} />
             <Text style={styles.headerSubtitle}>{park} • Active Field GPS</Text>
           </View>
         </View>

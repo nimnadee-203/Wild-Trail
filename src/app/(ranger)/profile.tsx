@@ -1,3 +1,4 @@
+import { WildTrailBrand } from '../../components/WildTrailBrand';
 import React, { useState } from 'react';
 import {
   View,
@@ -57,8 +58,7 @@ export default function ProfileScreen() {
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>Ranger Profile</Text>
-            <Text style={styles.headerSubtitle}>Field Officer Credentials & Settings</Text>
+            <WildTrailBrand light title="Ranger Profile" />
           </View>
         </View>
 

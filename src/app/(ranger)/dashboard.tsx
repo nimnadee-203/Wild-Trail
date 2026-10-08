@@ -1,3 +1,4 @@
+import { WildTrailBrand } from '../../components/WildTrailBrand';
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -161,13 +162,7 @@ export default function DashboardScreen() {
       {/* Top Application Header (Dark WildGuard Header) */}
       <View style={styles.darkHeader}>
         <View style={styles.darkHeaderLeft}>
-          <View style={styles.shieldIconWrap}>
-            <Ionicons name="shield-checkmark" size={20} color="#4ADE80" />
-          </View>
-          <View>
-            <Text style={styles.darkHeaderTitle}>WILDGUARD</Text>
-            <Text style={styles.darkHeaderSubtitle}>Yala NP Anti-Poaching System</Text>
-          </View>
+          <WildTrailBrand light title="Ranger Operations" />
         </View>
 
         <TouchableOpacity style={styles.syncedPillBtn} activeOpacity={0.8}>
@@ -413,6 +408,23 @@ export default function DashboardScreen() {
         </View>
 
         {/* Quick Actions Grid */}
+        <TouchableOpacity style={styles.reportIncidentBtn} onPress={() => router.push('/community-operations')}>
+          <Text style={styles.reportIncidentTitle}>Community Reports & Response</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.reportIncidentBtn}
+          onPress={() => router.push('/(ranger)/incident-reports')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.reportIncidentIcon}>
+            <Ionicons name="documents-outline" size={22} color={Colors.light.primaryDark} />
+          </View>
+          <View style={styles.reportIncidentText}>
+            <Text style={styles.reportIncidentTitle}>My Incident Reports</Text>
+            <Text style={styles.reportIncidentSubtitle}>View your reports and track their status</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={Colors.light.primaryDark} />
+        </TouchableOpacity>
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Quick Operations</Text>
           <Text style={styles.sectionSubtitle}>Standard Field Tools</Text>

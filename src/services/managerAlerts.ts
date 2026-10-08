@@ -19,6 +19,15 @@ export interface ManagerAlert {
   time: string;
   severity: ManagerAlertSeverity;
   status: ManagerAlertStatus;
+  species?: string;
+  animalId?: string;
+  distance?: string;
+  description?: string;
+  image?: string;
+  latitude?: string | number;
+  longitude?: string | number;
+  rawStatus?: string;
+  rawLevel?: string;
 }
 
 function formatAlertTime(value: unknown): string {
@@ -48,8 +57,8 @@ function mapStatus(value: unknown): ManagerAlertStatus {
 }
 
 function mapManagerAlert(id: string, data: DocumentData): ManagerAlert {
-  const species = String(data.species ?? 'Wildlife');
-  const animalId = String(data.animalId ?? id);
+  const species = data.species ? String(data.species) : 'Wildlife';
+  const animalId = data.animalId ? String(data.animalId) : id;
 
   return {
     firestoreId: id,
@@ -59,6 +68,15 @@ function mapManagerAlert(id: string, data: DocumentData): ManagerAlert {
     time: formatAlertTime(data.timestamp),
     severity: mapSeverity(data.level),
     status: mapStatus(data.status),
+    species,
+    animalId,
+    distance: data.distance ? String(data.distance) : undefined,
+    description: data.description ? String(data.description) : undefined,
+    image: data.image ? String(data.image) : undefined,
+    latitude: data.latitude !== undefined ? data.latitude : undefined,
+    longitude: data.longitude !== undefined ? data.longitude : undefined,
+    rawStatus: data.status ? String(data.status) : undefined,
+    rawLevel: data.level ? String(data.level) : undefined,
   };
 }
 

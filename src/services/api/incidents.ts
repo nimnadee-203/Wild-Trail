@@ -8,10 +8,9 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { auth, db, storage } from '../firebase';
+import { db } from '../firebase';
 import { DEFAULT_INCIDENT_RANGER, getIncidentReporter } from '../incidentReporter';
-import { readIncidentPhoto } from '../incidentPhoto';
+import { uploadIncidentPhoto } from '../cloudinary';
 import { apiFetch, ApiResponse } from './client';
 import { ConflictReport, IncidentCategory, IncidentReport, LocationData } from '../../types/incident';
 
@@ -28,39 +27,7 @@ export interface CreateIncidentResult extends IncidentReport {
 }
 
 function describePhotoError(error: unknown): string {
-  const code =
-    typeof error === 'object' && error !== null && 'code' in error
-      ? String(error.code)
-      : undefined;
-  switch (code) {
-    case 'storage/unauthorized':
-      return 'Photo storage denied access (storage/unauthorized). Check the deployed Storage rules.';
-    case 'storage/bucket-not-found':
-    case 'storage/no-default-bucket':
-      return `Photo storage is not configured (${code}). Check the Firebase Storage bucket.`;
-    case 'storage/quota-exceeded':
-      return 'Photo storage quota was exceeded (storage/quota-exceeded). Check Firebase billing and quota.';
-    default:
-      return `${code ? `${code}: ` : ''}${error instanceof Error ? error.message : 'Unable to upload a photo.'}`;
-  }
-}
-
-function requireReporterId() {
-  const reporterId = auth.currentUser?.uid;
-  if (!reporterId) {
-    throw new Error('You must be signed in to report an incident.');
-  }
-  return reporterId;
-}
-
-async function hasManagerAccess() {
-  const user = auth.currentUser;
-  if (!user) {
-    throw new Error('You must be signed in to view incidents.');
-  }
-
-  const token = await user.getIdTokenResult();
-  return token.claims.role === 'manager' || token.claims.role === 'admin';
+  return error instanceof Error ? error.message : 'Unable to upload a photo.';
 }
 
 function toIsoDate(value: unknown) {
@@ -71,20 +38,6 @@ function toIsoDate(value: unknown) {
     return value.toISOString();
   }
   return typeof value === 'string' ? value : new Date().toISOString();
-}
-
-async function uploadIncidentPhoto(reporterId: string, incidentId: string, uri: string, index: number) {
-  const { data, contentType, size } = await readIncidentPhoto(uri);
-  if (size === 0) {
-    throw new Error(`Incident photo ${index + 1} is empty. Please take it again.`);
-  }
-  if (size >= 10 * 1024 * 1024) {
-    throw new Error(`Incident photo ${index + 1} must be smaller than 10 MB.`);
-  }
-
-  const photoRef = ref(storage, `incidents/${reporterId}/${incidentId}/${index}`);
-  await uploadBytes(photoRef, data, { contentType });
-  return getDownloadURL(photoRef);
 }
 
 export async function createIncident(input: CreateIncidentInput): Promise<CreateIncidentResult> {
@@ -121,7 +74,7 @@ export async function createIncident(input: CreateIncidentInput): Promise<Create
   // Process photos one at a time to limit memory usage on mobile.
   for (const [index, uri] of (input.photoUris ?? []).entries()) {
     try {
-      photoUris.push(await uploadIncidentPhoto(reporterId, incidentRef.id, uri, index));
+      photoUris.push(await uploadIncidentPhoto(uri));
     } catch (error) {
       console.error(`Incident ${incidentRef.id}, photo ${index + 1} upload failed:`, error);
       photoErrors.push(describePhotoError(error));
@@ -160,16 +113,28 @@ export async function createIncident(input: CreateIncidentInput): Promise<Create
   };
 }
 
+export async function getRangerIncidents(): Promise<IncidentReport[]> {
+  const reporter = await getIncidentReporter();
+  const snapshot = await getDocs(
+    query(collection(db, 'incidents'), where('reporterId', '==', reporter.uid))
+  );
+  // Sort locally so this personal history does not require a composite index.
+  return snapshot.docs.map((document) => {
+    const data = document.data();
+    return {
+      ...data,
+      id: document.id,
+      createdAt: toIsoDate(data.createdAt),
+      updatedAt: toIsoDate(data.updatedAt),
+    } as IncidentReport;
+  }).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+}
+
 export async function getFirebaseIncidents(): Promise<IncidentReport[]> {
-  const reporterId = requireReporterId();
-  const canViewAll = await hasManagerAccess();
-  const incidentsQuery = canViewAll
-    ? query(collection(db, 'incidents'), orderBy('createdAt', 'desc'))
-    : query(
-        collection(db, 'incidents'),
-        where('reporterId', '==', reporterId),
-        orderBy('createdAt', 'desc')
-      );
+  await getIncidentReporter();
+  // This manager query must be authorized by Firestore rules. Never silently
+  // substitute a ranger-only list when the session lacks manager access.
+  const incidentsQuery = query(collection(db, 'incidents'), orderBy('createdAt', 'desc'));
   const snapshot = await getDocs(incidentsQuery);
 
   return snapshot.docs.map((document) => {
