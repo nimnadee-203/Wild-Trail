@@ -25,6 +25,9 @@ async function readDemoResponses(): Promise<Record<string, DemoResponse>> {
   return raw ? JSON.parse(raw) : {};
 }
 
+// Firestore creates this collection when the first report is delivered.
+export const COMMUNITY_REPORTS_COLLECTION = 'communityReports';
+
 const KEY = '@wildtrail_community_queue_v1';
 let storageLock: Promise<unknown> = Promise.resolve();
 let syncing: Promise<void> | undefined;
@@ -77,11 +80,11 @@ export function parseCommunitySms(body: string, phone: string): CommunityInput {
 
 export async function queueCommunityReport(input: CommunityInput, photos: string[]) {
   validateCommunityInput(input);
-  const id = doc(collection(db, 'incidents')).id;
+  const id = doc(collection(db, COMMUNITY_REPORTS_COLLECTION)).id;
   const localPhotos: string[] = [];
   for (const [index, uri] of photos.entries()) localPhotos.push(await retainCommunityPhoto(uri, id, index));
   const entry: QueuedCommunityReport = {
-    id, input, localPhotos, uploadedPhotos: [], received: false, complete: false,
+    id, collection: COMMUNITY_REPORTS_COLLECTION, input, localPhotos, uploadedPhotos: [], received: false, complete: false,
     ...(auth.currentUser ? { ownerUid: auth.currentUser.uid } : {}),
   };
   await locked(async () => {
@@ -104,7 +107,11 @@ export function syncCommunityReports(): Promise<void> {
       delete entry.error;
       await checkpoint(entry);
       try {
-        const reference = doc(db, 'incidents', entry.id);
+        // Finish uploads for reports received before the collection change.
+        const reportCollection = entry.collection ?? (entry.received ? 'incidents' : COMMUNITY_REPORTS_COLLECTION);
+        entry.collection = reportCollection;
+        await checkpoint(entry);
+        const reference = doc(db, reportCollection, entry.id);
         if (!entry.received) {
           // Stable document IDs and a transaction prevent duplicate reports on retry.
           await runTransaction(db, async (transaction) => {
@@ -147,7 +154,7 @@ export function watchCommunityReports(onReports: (reports: CommunityReport[]) =>
     if (active) onReports(reports.map((report) => report.assignedTo ? report : { ...report, ...overlays[report.id] }));
   }).catch(onError); };
   demoListeners.add(publish);
-  const unsubscribe = onSnapshot(query(collection(db, 'incidents'), where('reporterType', '==', 'community')), (snapshot) => {
+  const unsubscribe = onSnapshot(query(collection(db, COMMUNITY_REPORTS_COLLECTION), where('reporterType', '==', 'community')), (snapshot) => {
     reports = snapshot.docs.map((record) => {
       const data = record.data();
       const date = (value: any) => value?.toDate?.().toISOString() ?? '';
@@ -163,7 +170,7 @@ export async function acceptCommunityOperation(id: string) {
   await auth.authStateReady();
   const demo = await demoOfficer();
   if (demo) {
-    const snapshot = await getDoc(doc(db, 'incidents', id));
+    const snapshot = await getDoc(doc(db, COMMUNITY_REPORTS_COLLECTION, id));
     const report = snapshot.data();
     if (!report || report.reporterType !== 'community') throw new Error('Community report not found.');
     if (report.assignedTo || report.status !== 'pending') throw new Error('This operation is no longer available.');
@@ -183,7 +190,7 @@ export async function acceptCommunityOperation(id: string) {
   const role = profile?.accountStatus === 'ACTIVE' ? profile.role : token.claims.role;
   if (!['ranger', 'liaison'].includes(role)) throw new Error('Only rangers and liaison officers can accept operations.');
   await runTransaction(db, async (transaction) => {
-    const reference = doc(db, 'incidents', id);
+    const reference = doc(db, COMMUNITY_REPORTS_COLLECTION, id);
     const snapshot = await transaction.get(reference);
     const report = snapshot.data();
     if (!report || report.reporterType !== 'community') throw new Error('Community report not found.');
@@ -205,5 +212,5 @@ export async function respondToCommunityReport(id: string, status: IncidentStatu
     demoListeners.forEach((notify) => notify());
     return;
   }
-  await updateDoc(doc(db, 'incidents', id), { status, responseNotes: responseNotes.trim(), updatedAt: serverTimestamp() });
+  await updateDoc(doc(db, COMMUNITY_REPORTS_COLLECTION, id), { status, responseNotes: responseNotes.trim(), updatedAt: serverTimestamp() });
 }
