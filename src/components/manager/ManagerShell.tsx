@@ -1,3 +1,7 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { WildTrailBrand } from '../WildTrailBrand';
+import { RangerAvatar } from '../RangerAvatar';
+import { useStaffProfile } from '../../hooks/useStaffProfile';
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -16,6 +20,8 @@ export function ManagerShell({
   active: ManagerSection;
   children: React.ReactNode;
 }) {
+  const profile = useStaffProfile();
+  const managerName = profile?.name || 'Park Manager';
   const { width } = useWindowDimensions();
   const compact = width < 760;
   const navigate = (section: ManagerSection) => {
@@ -23,12 +29,11 @@ export function ManagerShell({
   };
 
   return (
-    <View style={styles.root}>
+    <SafeAreaView style={styles.root} edges={['top', 'bottom', 'left', 'right']}>
       {!compact && (
         <View style={styles.sidebar}>
           <View style={styles.brand}>
-            <View style={styles.brandMark}><Ionicons name="leaf" size={22} color="#FFFFFF" /></View>
-            <View><Text style={styles.brandTitle}>WildTrail</Text><Text style={styles.brandSub}>PARK MANAGEMENT</Text></View>
+            <WildTrailBrand light title="PARK MANAGEMENT" />
           </View>
           <Text style={styles.menuLabel}>MAIN MENU</Text>
           <View style={styles.menu}>
@@ -41,21 +46,21 @@ export function ManagerShell({
             ))}
           </View>
           <View style={styles.sidebarBottom}>
-            <View style={styles.managerAvatar}><Text style={styles.avatarText}>SK</Text></View>
-            <View style={{ flex: 1 }}><Text style={styles.managerName}>Sarah Kimani</Text><Text style={styles.managerRole}>Park Manager</Text></View>
+            <RangerAvatar name={managerName} uri={profile?.photoURL} size={36} />
+            <View style={{ flex: 1 }}><Text style={styles.managerName}>{managerName}</Text><Text style={styles.managerRole}>Park Manager</Text></View>
             <Ionicons name="settings-outline" size={19} color="#A7BDB3" />
           </View>
         </View>
       )}
       <View style={styles.main}>
-        <View style={styles.topbar}>
-          <View><Text style={styles.mobileBrand}>{compact ? 'WildTrail' : 'Good morning, Sarah'}</Text>{!compact && <Text style={styles.topSub}>Here&apos;s what&apos;s happening in your park today.</Text>}</View>
-          <View style={styles.topActions}><Pressable style={styles.iconButton}><Ionicons name="search-outline" size={20} color={ink} /></Pressable><Pressable style={styles.iconButton} onPress={() => navigate('alerts')}><Ionicons name="notifications-outline" size={20} color={ink} /><View style={styles.notificationDot} /></Pressable><View style={styles.topAvatar}><Text style={styles.avatarText}>SK</Text></View></View>
+        <View style={[styles.topbar, compact && { paddingHorizontal: 18 }]}>
+          <View style={{ flex: 1 }}><WildTrailBrand light title="Park management" /></View>
+          <View style={styles.topActions}><Pressable style={styles.iconButton}><Ionicons name="search-outline" size={20} color="#FFFFFF" /></Pressable><Pressable style={styles.iconButton} onPress={() => navigate('alerts')}><Ionicons name="notifications-outline" size={20} color="#FFFFFF" /><View style={styles.notificationDot} /></Pressable><RangerAvatar name={managerName} uri={profile?.photoURL} size={36} /></View>
         </View>
         <ScrollView contentContainerStyle={[styles.content, compact && styles.contentCompact]} showsVerticalScrollIndicator={false}>{children}</ScrollView>
         {compact && <View style={styles.bottomNav}>{managerSections.slice(0, 5).map((item) => <Pressable key={item.key} onPress={() => navigate(item.key)} style={styles.bottomItem}><Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={21} color={active === item.key ? green : muted} /><Text style={[styles.bottomLabel, active === item.key && { color: green }]}>{item.key === 'monitoring' ? 'Monitor' : item.label.split(' ')[0]}</Text></Pressable>)}</View>}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -82,7 +87,7 @@ const styles = StyleSheet.create({
   sidebarBottom: { marginTop: 'auto', borderTopWidth: 1, borderTopColor: '#32614F', paddingTop: 18, flexDirection: 'row', alignItems: 'center', gap: 9 },
   managerAvatar: { width: 33, height: 33, borderRadius: 17, backgroundColor: '#D3A06B', alignItems: 'center', justifyContent: 'center' }, avatarText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
   managerName: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' }, managerRole: { color: '#A7BDB3', fontSize: 10, marginTop: 2 },
-  main: { flex: 1 }, topbar: { height: 88, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E6EEE9', paddingHorizontal: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  mobileBrand: { color: ink, fontSize: 20, fontWeight: '800' }, topSub: { color: muted, fontSize: 12, marginTop: 4 }, topActions: { flexDirection: 'row', alignItems: 'center', gap: 12 }, iconButton: { width: 38, height: 38, borderRadius: 10, borderWidth: 1, borderColor: '#E4ECE7', alignItems: 'center', justifyContent: 'center', position: 'relative' }, notificationDot: { position: 'absolute', width: 7, height: 7, borderRadius: 4, backgroundColor: '#E86A56', right: 8, top: 7 }, topAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#D3A06B', alignItems: 'center', justifyContent: 'center' },
+  main: { flex: 1 }, topbar: { minHeight: 80, backgroundColor: green, borderBottomWidth: 1, borderBottomColor: '#E6EEE9', paddingHorizontal: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  mobileBrand: { color: ink, fontSize: 20, fontWeight: '800' }, topSub: { color: muted, fontSize: 12, marginTop: 4 }, topActions: { flexDirection: 'row', alignItems: 'center', gap: 12 }, iconButton: { width: 38, height: 38, borderRadius: 10, borderWidth: 1, borderColor: '#537E6B', alignItems: 'center', justifyContent: 'center', position: 'relative' }, notificationDot: { position: 'absolute', width: 7, height: 7, borderRadius: 4, backgroundColor: '#E86A56', right: 8, top: 7 }, topAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#D3A06B', alignItems: 'center', justifyContent: 'center' },
   content: { padding: 32, maxWidth: 1400, width: '100%', alignSelf: 'center', paddingBottom: 50 }, contentCompact: { padding: 18, paddingBottom: 90 }, bottomNav: { height: 69, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E4ECE7', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', position: 'absolute', bottom: 0, left: 0, right: 0 }, bottomItem: { alignItems: 'center', gap: 3 }, bottomLabel: { fontSize: 9, color: muted, fontWeight: '600' },
 });
