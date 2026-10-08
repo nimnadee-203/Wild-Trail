@@ -81,6 +81,11 @@ export default function ProfileScreen() {
   const saveNewAvatar = async (uri: string) => {
     setAvatarUri(uri);
     await storageService.setItem(STORAGE_KEYS.RANGER_AVATAR, uri);
+    if (userProfile) {
+      const updatedProfile = { ...userProfile, photoURL: uri };
+      setUserProfile(updatedProfile);
+      await storageService.setItem(STORAGE_KEYS.USER_PROFILE, updatedProfile);
+    }
     setAvatarModalVisible(false);
     if (Platform.OS === 'web') {
       window.alert('Profile photo updated successfully!');

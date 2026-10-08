@@ -9,17 +9,25 @@ const DEMO_PHOTO = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d
 
 export function useRangerIdentity() {
   const [user, setUser] = useState<StaffUser | null>(null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
   useFocusEffect(useCallback(() => {
     let active = true;
     storageService.getItem<StaffUser>(STORAGE_KEYS.USER_PROFILE)
       .then(profile => { if (active) setUser(profile); })
       .catch(() => { if (active) setUser(null); });
+
+    storageService.getItem<string>(STORAGE_KEYS.RANGER_AVATAR)
+      .then(savedAvatar => { if (active && savedAvatar) setAvatarUri(savedAvatar); })
+      .catch(() => {});
+
     return () => { active = false; };
   }, []));
+
   return {
     name: user?.name || DEFAULT_INCIDENT_RANGER.name,
     badge: user?.badge || user?.staffId || DEFAULT_INCIDENT_RANGER.badgeNumber,
-    photo: user?.photoURL || (!user || user.uid.startsWith('usr-') ? DEMO_PHOTO : undefined),
-    station: [user?.parkId, user?.zoneId].filter(Boolean).join(' ? ') || 'Wildlife Conservation Department',
+    photo: avatarUri || user?.photoURL || (!user || user.uid.startsWith('usr-') ? DEMO_PHOTO : undefined),
+    station: [user?.parkId, user?.zoneId].filter(Boolean).join(' - ') || 'Wildlife Conservation Department',
   };
 }
