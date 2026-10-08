@@ -78,13 +78,80 @@ export function parseCommunitySms(body: string, phone: string): CommunityInput {
   return input;
 }
 
+let simulatedOffline = false;
+const networkListeners = new Set<(online: boolean) => void>();
+
+export function isCommunityOnline(): boolean {
+  if (simulatedOffline) return false;
+  if (typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean') {
+    return navigator.onLine;
+  }
+  return true;
+}
+
+export function setSimulatedOffline(offline: boolean) {
+  simulatedOffline = offline;
+  notifyNetworkChange();
+}
+
+export function getSimulatedOffline(): boolean {
+  return simulatedOffline;
+}
+
+function notifyNetworkChange() {
+  const status = isCommunityOnline();
+  networkListeners.forEach((listener) => {
+    try {
+      listener(status);
+    } catch {
+      // ignore
+    }
+  });
+  if (status) {
+    // When internet returns, automatically sync pending reports to Firebase
+    void syncCommunityReports();
+  }
+}
+
+export function subscribeNetworkStatus(callback: (online: boolean) => void): () => void {
+  networkListeners.add(callback);
+  return () => {
+    networkListeners.delete(callback);
+  };
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    notifyNetworkChange();
+  });
+  window.addEventListener('offline', () => {
+    notifyNetworkChange();
+  });
+}
+
+export function getReportSyncStatus(
+  entry: QueuedCommunityReport
+): 'waiting' | 'syncing' | 'synced' | 'failed' {
+  if (entry.complete || entry.syncStatus === 'synced') return 'synced';
+  if (entry.syncStatus === 'syncing') return 'syncing';
+  if (entry.error || entry.syncStatus === 'failed') return 'failed';
+  return 'waiting';
+}
+
 export async function queueCommunityReport(input: CommunityInput, photos: string[]) {
   validateCommunityInput(input);
   const id = doc(collection(db, COMMUNITY_REPORTS_COLLECTION)).id;
   const localPhotos: string[] = [];
   for (const [index, uri] of photos.entries()) localPhotos.push(await retainCommunityPhoto(uri, id, index));
   const entry: QueuedCommunityReport = {
-    id, collection: COMMUNITY_REPORTS_COLLECTION, input, localPhotos, uploadedPhotos: [], received: false, complete: false,
+    id,
+    collection: COMMUNITY_REPORTS_COLLECTION,
+    input,
+    localPhotos,
+    uploadedPhotos: [],
+    received: false,
+    complete: false,
+    syncStatus: 'waiting',
     ...(auth.currentUser ? { ownerUid: auth.currentUser.uid } : {}),
   };
   await locked(async () => {
@@ -95,16 +162,24 @@ export async function queueCommunityReport(input: CommunityInput, photos: string
   return entry;
 }
 
-export function syncCommunityReports(): Promise<void> {
+export function syncCommunityReports(targetId?: string): Promise<void> {
   if (syncing) return syncing;
   syncing = (async () => {
     const queue = await getCommunityQueue();
-    if (!queue.some((entry) => !entry.complete)) return;
+    if (!queue.some((entry) => !entry.complete && (!targetId || entry.id === targetId))) return;
+
+    if (!isCommunityOnline()) {
+      // Offline: reports stay queued locally and marked "waiting" until internet returns
+      return;
+    }
+
     const user = await getIncidentReporter();
     for (const entry of queue) {
       if (entry.complete || (entry.ownerUid && entry.ownerUid !== user.uid)) continue;
+      if (targetId && entry.id !== targetId) continue;
       entry.ownerUid = user.uid;
       delete entry.error;
+      entry.syncStatus = 'syncing';
       await checkpoint(entry);
       try {
         // Finish uploads for reports received before the collection change.
@@ -136,8 +211,11 @@ export function syncCommunityReports(): Promise<void> {
         // Also repairs a failed link update without uploading the photo again.
         if (entry.uploadedPhotos.length) await updateDoc(reference, { photoUris: entry.uploadedPhotos, updatedAt: serverTimestamp() });
         entry.complete = true;
+        entry.syncStatus = 'synced';
+        delete entry.error;
         await checkpoint(entry);
       } catch (error) {
+        entry.syncStatus = 'failed';
         entry.error = error instanceof Error ? error.message : 'Waiting for connection.';
         await checkpoint(entry);
       }

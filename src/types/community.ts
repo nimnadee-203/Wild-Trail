@@ -24,6 +24,8 @@ export interface CommunityInput {
   source: 'community_app' | 'sms_simulated';
 }
 
+export type CommunitySyncStatus = 'waiting' | 'syncing' | 'synced' | 'failed';
+
 export interface QueuedCommunityReport {
   id: string;
   collection?: 'communityReports' | 'incidents';
@@ -33,6 +35,7 @@ export interface QueuedCommunityReport {
   ownerUid?: string;
   received: boolean;
   complete: boolean;
+  syncStatus?: CommunitySyncStatus;
   error?: string;
 }
 
