@@ -58,7 +58,7 @@ export function ManagerShell({
           <View style={styles.topActions}><Pressable style={styles.iconButton}><Ionicons name="search-outline" size={20} color="#FFFFFF" /></Pressable><Pressable style={styles.iconButton} onPress={() => navigate('alerts')}><Ionicons name="notifications-outline" size={20} color="#FFFFFF" /><View style={styles.notificationDot} /></Pressable><RangerAvatar name={managerName} uri={profile?.photoURL} size={36} /></View>
         </View>
         <ScrollView contentContainerStyle={[styles.content, compact && styles.contentCompact]} showsVerticalScrollIndicator={false}>{children}</ScrollView>
-        {compact && <View style={styles.bottomNav}>{managerSections.slice(0, 5).map((item) => <Pressable key={item.key} onPress={() => navigate(item.key)} style={styles.bottomItem}><Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={21} color={active === item.key ? green : muted} /><Text style={[styles.bottomLabel, active === item.key && { color: green }]}>{item.key === 'monitoring' ? 'Monitor' : item.label.split(' ')[0]}</Text></Pressable>)}</View>}
+        {compact && <View style={styles.bottomNav}>{managerSections.slice(0, 6).map((item) => <Pressable key={item.key} onPress={() => navigate(item.key)} style={styles.bottomItem}><Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={21} color={active === item.key ? green : muted} /><Text style={[styles.bottomLabel, active === item.key && { color: green }]}>{item.key === 'monitoring' ? 'Monitor' : item.label.split(' ')[0]}</Text></Pressable>)}</View>}
       </View>
     </SafeAreaView>
   );

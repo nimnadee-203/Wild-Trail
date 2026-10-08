@@ -1,3 +1,4 @@
+import { goBackOrReplace } from '../../utils/navigation';
 import { WildTrailBrand } from '../../components/WildTrailBrand';
 import React, { useState } from 'react';
 import {
@@ -99,13 +100,13 @@ export default function ReportIncidentScreen() {
 
   const goBack = () => {
     if (step === 4) {
-      router.back();
+      goBackOrReplace('/(ranger)/dashboard');
       return;
     }
     if (step > 1) {
       setStep((current) => current - 1);
     } else {
-      router.back();
+      goBackOrReplace('/(ranger)/dashboard');
     }
   };
 
