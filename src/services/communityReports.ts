@@ -195,7 +195,15 @@ export function syncCommunityReports(targetId?: string): Promise<void> {
               ...entry.input, reporterType: 'community', reporterId: user.uid,
               title: COMMUNITY_REPORT_TYPES[entry.input.kind].label,
               category: COMMUNITY_REPORT_TYPES[entry.input.kind].category,
-              location: { address: `${entry.input.village}, ${entry.input.boundarySection}: ${entry.input.landmark}` },
+              location: {
+                address: `${entry.input.village}, ${entry.input.boundarySection}: ${entry.input.landmark}`,
+                ...(entry.input.urgentAlert
+                  ? {
+                    latitude: entry.input.urgentAlert.latitude,
+                    longitude: entry.input.urgentAlert.longitude,
+                  }
+                  : {}),
+              },
               severity: 'medium', status: 'pending', assignedTo: '', responseNotes: '', photoUris: [],
               createdAt: serverTimestamp(), updatedAt: serverTimestamp(), receivedAt: serverTimestamp(),
             });

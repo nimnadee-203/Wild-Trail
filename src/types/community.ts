@@ -13,6 +13,13 @@ export type CommunityReportKind = keyof typeof COMMUNITY_REPORT_TYPES;
 export const COMMUNITY_REPORT_KINDS = Object.keys(COMMUNITY_REPORT_TYPES) as CommunityReportKind[];
 export const COMMUNITY_SMS_KEYWORDS = COMMUNITY_REPORT_KINDS.map((kind) => COMMUNITY_REPORT_TYPES[kind].keyword).join(', ');
 
+export interface CommunityUrgentAlert {
+  animal: string;
+  direction: string;
+  latitude: number;
+  longitude: number;
+}
+
 export interface CommunityInput {
   kind: CommunityReportKind;
   village: string;
@@ -22,6 +29,7 @@ export interface CommunityInput {
   contactPhone: string;
   occurredAt: string;
   source: 'community_app' | 'sms_simulated';
+  urgentAlert?: CommunityUrgentAlert;
 }
 
 export type CommunitySyncStatus = 'waiting' | 'syncing' | 'synced' | 'failed';

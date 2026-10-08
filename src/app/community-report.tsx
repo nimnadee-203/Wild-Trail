@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useCameraPermission } from '../hooks/useCameraPermission';
 import { communityStyles as s } from '../components/communityStyles';
 import {
@@ -38,6 +39,14 @@ import { DynamicDescriptionFields } from '../components/community/DynamicDescrip
 
 export default function CommunityReportScreen() {
   const [kind, setKind] = useState<CommunityInput['kind']>('crop_raiding');
+  const [urgentOpen, setUrgentOpen] = useState(false);
+  const [urgentAnimal, setUrgentAnimal] = useState('Elephant');
+  const [urgentOtherAnimal, setUrgentOtherAnimal] = useState('');
+  const [urgentDirection, setUrgentDirection] = useState('');
+  const [urgentCoords, setUrgentCoords] = useState<LocationCoords | null>(null);
+  const [urgentOccurredAt, setUrgentOccurredAt] = useState('');
+  const [urgentLocationBusy, setUrgentLocationBusy] = useState(false);
+  const [urgentBusy, setUrgentBusy] = useState(false);
 
   // 1. Village dropdown
   const [village, setVillage] = useState('');
@@ -77,6 +86,93 @@ export default function CommunityReportScreen() {
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(() => isCommunityOnline());
   const { takePhotoWithCamera, pickImageFromGallery } = useCameraPermission();
+
+  const getLocalDateTime = () => {
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16)
+      .replace('T', ' ');
+  };
+
+  const captureUrgentLocation = async () => {
+    setUrgentLocationBusy(true);
+    setError('');
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        throw new Error('Location permission is required for an immediate wildlife alert.');
+      }
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      setUrgentCoords({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Unable to get your current location.');
+      setUrgentCoords(null);
+    } finally {
+      setUrgentLocationBusy(false);
+    }
+  };
+
+  const openUrgentReport = () => {
+    setUrgentOpen(true);
+    setUrgentOccurredAt(getLocalDateTime());
+    void captureUrgentLocation();
+  };
+
+  const submitUrgentReport = async () => {
+    const animal = urgentAnimal === 'Other' ? urgentOtherAnimal.trim() : urgentAnimal;
+    if (!animal || !urgentDirection || !urgentCoords) {
+      setError('Choose the animal and direction, and allow GPS before sending the alert.');
+      return;
+    }
+
+    setUrgentBusy(true);
+    setError('');
+    try {
+      const urgentKind = urgentAnimal === 'Elephant' ? 'elephant_sighting' : 'other_wildlife_conflict';
+      const saved = await queueCommunityReport(
+        {
+          kind: urgentKind,
+          village: 'Immediate GPS alert',
+          boundarySection: 'Current location',
+          landmark: `GPS: ${urgentCoords.latitude.toFixed(5)}, ${urgentCoords.longitude.toFixed(5)}`,
+          description: `${animal} moving ${urgentDirection.toLowerCase()}.`,
+          contactPhone: '',
+          occurredAt: urgentOccurredAt,
+          source: 'community_app',
+          urgentAlert: {
+            animal,
+            direction: urgentDirection,
+            latitude: urgentCoords.latitude,
+            longitude: urgentCoords.longitude,
+          },
+        },
+        []
+      );
+
+      setReceipt(saved.id);
+      setUrgentOpen(false);
+      setUrgentCoords(null);
+      setUrgentDirection('');
+      setUrgentOtherAnimal('');
+      const updated = await getCommunityQueue();
+      setQueue(updated);
+      if (isCommunityOnline()) {
+        void syncCommunityReports()
+          .then(async () => setQueue(await getCommunityQueue()))
+          .catch(() => undefined);
+      }
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Unable to send immediate alert.');
+    } finally {
+      setUrgentBusy(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -266,6 +362,114 @@ export default function CommunityReportScreen() {
           are not required.
         </Text>
       </View>
+
+      <View style={urgentStyles.card}>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={urgentStyles.title}>🚨 Immediate Wildlife Alert</Text>
+          <Text style={urgentStyles.text}>
+            For urgent situations such as an elephant moving toward a village.
+          </Text>
+        </View>
+        {!urgentOpen && (
+          <Pressable
+            style={urgentStyles.button}
+            onPress={openUrgentReport}
+            accessibilityRole="button"
+            accessibilityLabel="Open immediate wildlife alert"
+          >
+            <Text style={urgentStyles.buttonText}>Send urgent alert</Text>
+          </Pressable>
+        )}
+      </View>
+
+      {urgentOpen && (
+        <View style={urgentStyles.panel}>
+          <View style={urgentStyles.panelHeader}>
+            <Text style={s.title}>Quick report</Text>
+            <Pressable onPress={() => setUrgentOpen(false)} accessibilityLabel="Close quick report">
+              <Ionicons name="close-circle-outline" size={26} color="#991B1B" />
+            </Pressable>
+          </View>
+
+          <Text style={s.label}>Animal</Text>
+          <View style={s.row}>
+            {['Elephant', 'Leopard', 'Wild boar', 'Bear', 'Other'].map((animal) => {
+              const selected = urgentAnimal === animal;
+              return (
+                <Pressable
+                  key={animal}
+                  style={selected ? urgentStyles.selectedChoice : urgentStyles.choice}
+                  onPress={() => setUrgentAnimal(animal)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                >
+                  <Text style={selected ? urgentStyles.selectedChoiceText : s.link}>{animal}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {urgentAnimal === 'Other' && (
+            <TextInput
+              style={s.input}
+              value={urgentOtherAnimal}
+              onChangeText={setUrgentOtherAnimal}
+              placeholder="Enter animal"
+              placeholderTextColor="#9CA3AF"
+              accessibilityLabel="Other animal"
+            />
+          )}
+
+          <Text style={s.label}>Direction</Text>
+          <View style={s.row}>
+            {['Toward village', 'Away from village', 'Crossing road', 'Unknown'].map((direction) => {
+              const selected = urgentDirection === direction;
+              return (
+                <Pressable
+                  key={direction}
+                  style={selected ? urgentStyles.selectedChoice : urgentStyles.choice}
+                  onPress={() => setUrgentDirection(direction)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                >
+                  <Text style={selected ? urgentStyles.selectedChoiceText : s.link}>{direction}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={urgentStyles.locationRow}>
+            <Ionicons name="navigate" size={20} color="#991B1B" />
+            <Text style={urgentStyles.text}>
+              {urgentLocationBusy
+                ? 'Getting your current GPS location…'
+                : urgentCoords
+                  ? `GPS ready: ${urgentCoords.latitude.toFixed(5)}, ${urgentCoords.longitude.toFixed(5)}`
+                  : 'GPS location is required'}
+            </Text>
+            <Pressable
+              onPress={() => void captureUrgentLocation()}
+              disabled={urgentLocationBusy}
+              accessibilityLabel="Refresh GPS location"
+            >
+              <Ionicons name="refresh" size={20} color="#991B1B" />
+            </Pressable>
+          </View>
+          <Text style={s.text}>Time: {urgentOccurredAt}</Text>
+
+          <Pressable
+            style={[urgentStyles.submit, (urgentBusy || urgentLocationBusy) && s.disabled]}
+            onPress={() => void submitUrgentReport()}
+            disabled={urgentBusy || urgentLocationBusy}
+            accessibilityRole="button"
+          >
+            {urgentBusy ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={urgentStyles.submitText}>🚨 Send Alert Now</Text>
+            )}
+          </Pressable>
+        </View>
+      )}
 
       {/* Incident Type Selectors */}
       <View style={s.row}>
@@ -852,4 +1056,66 @@ const statusStyles = StyleSheet.create({
   },
 });
 
-
+const urgentStyles = StyleSheet.create({
+  card: {
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#F97316',
+    borderRadius: 12,
+    padding: 14,
+    gap: 10,
+  },
+  title: { color: '#991B1B', fontSize: 17, fontWeight: '800' },
+  text: { color: '#7C2D12', fontSize: 14, lineHeight: 20 },
+  button: {
+    backgroundColor: '#B91C1C',
+    borderRadius: 8,
+    padding: 14,
+    alignItems: 'center',
+  },
+  buttonText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
+  panel: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: 12,
+    padding: 14,
+    gap: 10,
+  },
+  panelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  choice: {
+    borderWidth: 1,
+    borderColor: '#B91C1C',
+    borderRadius: 8,
+    padding: 10,
+    minHeight: 42,
+  },
+  selectedChoice: {
+    backgroundColor: '#B91C1C',
+    borderRadius: 8,
+    padding: 10,
+    minHeight: 42,
+  },
+  selectedChoiceText: { color: '#FFFFFF', fontWeight: '700' },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 10,
+  },
+  submit: {
+    backgroundColor: '#991B1B',
+    borderRadius: 8,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+  },
+  submitText: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
+});
