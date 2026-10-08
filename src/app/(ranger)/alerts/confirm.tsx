@@ -1,10 +1,11 @@
+import { goBackOrReplace } from '../../../utils/navigation';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WildTrailBrand } from '../../../components/WildTrailBrand';
 import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
   Platform,
@@ -72,9 +73,9 @@ export default function ResponseConfirmationScreen() {
 
   if (!alertData) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => goBackOrReplace('/(ranger)/alerts')}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -86,11 +87,11 @@ export default function ResponseConfirmationScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backBtn}
-          onPress={() => router.back()}
+          onPress={() => goBackOrReplace('/(ranger)/alerts')}
           activeOpacity={0.7}
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />

@@ -1,10 +1,12 @@
+import { useRangerIdentity } from '../../hooks/useRangerIdentity';
+import { RangerAvatar } from '../../components/RangerAvatar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WildTrailBrand } from '../../components/WildTrailBrand';
 import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Switch,
@@ -49,6 +51,7 @@ const PRESET_AVATARS = [
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const identity = useRangerIdentity();
   const [highAccuracyGps, setHighAccuracyGps] = useState(true);
   const [criticalPushAlerts, setCriticalPushAlerts] = useState(true);
   const [offlineMapCache, setOfflineMapCache] = useState(true);
@@ -211,7 +214,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       {/* Top Header Navigation Bar */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -245,22 +248,14 @@ export default function ProfileScreen() {
               onPress={() => setAvatarModalVisible(true)}
               activeOpacity={0.85}
             >
-              {avatarUri ? (
-                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
-              ) : (
-                <View style={styles.avatarWrap}>
-                  <Ionicons name="person" size={36} color="#FFFFFF" />
-                </View>
-              )}
+              <RangerAvatar name={identity.name} uri={avatarUri || identity.photo} size={64} />
               <View style={styles.avatarEditBadge}>
                 <Ionicons name="camera" size={12} color="#FFFFFF" />
               </View>
             </TouchableOpacity>
             <View style={styles.officerInfo}>
               <View style={styles.officerNameRow}>
-                <Text style={styles.officerName}>
-                  {userProfile?.name ? `Officer ${userProfile.name}` : 'Officer Nimal Perera'}
-                </Text>
+                <Text style={styles.officerName}>{identity.name}</Text>
                 <View style={styles.badgePill}>
                   <Text style={styles.badgePillText}>{userProfile?.accountStatus || 'ACTIVE'}</Text>
                 </View>
@@ -269,16 +264,14 @@ export default function ProfileScreen() {
                 Senior Field Ranger • {userProfile?.zoneId ? userProfile.zoneId.toUpperCase() : 'BLOCK-01'} Lead
               </Text>
               <Text style={styles.badgeNum}>
-                Badge: {userProfile?.badge || userProfile?.staffId || 'RG-204'} • {userProfile?.email || 'nimal@wildguard.org'}
+                Badge: {identity.badge} • {userProfile?.email || 'nimal@wildguard.org'}
               </Text>
             </View>
           </View>
 
           <View style={styles.stationRow}>
             <Ionicons name="business-outline" size={15} color="#4B5563" />
-            <Text style={styles.stationText}>
-              {userProfile?.parkId ? userProfile.parkId.toUpperCase() : 'YALA'} NP Conservation Post, {userProfile?.zoneId ? userProfile.zoneId.toUpperCase() : 'BLOCK-01'}
-            </Text>
+            <Text style={styles.stationText}>{identity.station}</Text>
           </View>
         </View>
 
@@ -319,7 +312,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => router.push('/report-incident')}
+            onPress={() => router.push('/(ranger)/report-incident')}
             activeOpacity={0.7}
           >
             <View style={[styles.menuIconWrap, { backgroundColor: '#FEF3C7' }]}>

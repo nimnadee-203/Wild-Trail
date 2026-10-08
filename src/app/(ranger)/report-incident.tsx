@@ -1,5 +1,6 @@
+import { goBackOrReplace } from '../../utils/navigation';
 import { WildTrailBrand } from '../../components/WildTrailBrand';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Alert,
   Image,
@@ -17,12 +18,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '../../constants/colors';
 import { useCameraPermission } from '../../hooks/useCameraPermission';
-import { useLocation } from '../../hooks/useLocation';
+import { LocationLandmarkPicker } from '../../components/community/LocationLandmarkPicker';
+import type { LocationCoords } from '../../components/community/MapPickerModal';
 import { formatCoordinates } from '../../utils/formatting';
 import { createIncident } from '../../services/api/incidents';
-import { IncidentCategory } from '../../types/incident';
+import { IncidentCategory, IncidentSeverity } from '../../types/incident';
 
 type IncidentType = 'Snare' | 'Carcass' | 'Illegal Campsite' | 'Wildlife Sighting' | 'Other';
+
+const PRIORITIES: { value: IncidentSeverity; label: string; hint: string; color: string }[] = [
+  { value: 'low', label: 'Low', hint: 'Routine observation', color: '#245747' },
+  { value: 'medium', label: 'Medium', hint: 'Needs attention', color: '#825400' },
+  { value: 'high', label: 'High', hint: 'Urgent response', color: '#A54213' },
+  { value: 'critical', label: 'Critical', hint: 'Immediate danger', color: '#B42332' },
+];
 
 const INCIDENT_TYPES: { label: IncidentType; icon: keyof typeof Ionicons.glyphMap }[] = [
   { label: 'Snare', icon: 'search-outline' },
@@ -46,7 +55,6 @@ const formatDate = () =>
 
 export default function ReportIncidentScreen() {
   const router = useRouter();
-  const { location } = useLocation();
   const { photos, takePhotoWithCamera, pickImageFromGallery, addPhoto, removePhoto } = useCameraPermission();
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
   const [isChoosingPhoto, setIsChoosingPhoto] = useState(false);
@@ -54,17 +62,19 @@ export default function ReportIncidentScreen() {
   const [incidentType, setIncidentType] = useState<IncidentType>('Snare');
   const [customIncidentType, setCustomIncidentType] = useState('');
   const [description, setDescription] = useState('');
+  const [priority, setPriority] = useState<IncidentSeverity>('medium');
   const [dateTime] = useState(formatDate);
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [manualLocation, setManualLocation] = useState('');
-  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<LocationCoords | null>(null);
+  const [locationSource, setLocationSource] = useState<'gps' | 'map' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photoWarning, setPhotoWarning] = useState<string>();
 
-  const coordinates = useMemo(
-    () => manualLocation.trim() || formatCoordinates(location?.latitude, location?.longitude),
-    [location, manualLocation]
-  );
+  const coordinateLabel = formatCoordinates(selectedLocation?.latitude, selectedLocation?.longitude);
+  const coordinates = manualLocation.trim()
+    ? `${manualLocation.trim()} (${coordinateLabel})`
+    : coordinateLabel;
   const displayedIncidentType =
     incidentType === 'Other' ? customIncidentType.trim() || 'Other' : incidentType;
   const patrolId = 'PAT-1222-3255';
@@ -90,13 +100,13 @@ export default function ReportIncidentScreen() {
 
   const goBack = () => {
     if (step === 4) {
-      router.back();
+      goBackOrReplace('/(ranger)/dashboard');
       return;
     }
     if (step > 1) {
       setStep((current) => current - 1);
     } else {
-      router.back();
+      goBackOrReplace('/(ranger)/dashboard');
     }
   };
 
@@ -105,8 +115,8 @@ export default function ReportIncidentScreen() {
       Alert.alert('Description required', 'Please add a short description before submitting.');
       return;
     }
-    if (!location) {
-      Alert.alert('Location unavailable', 'Allow location access and try again before submitting.');
+    if (!selectedLocation) {
+      Alert.alert('Location required', 'Use your current location or select the incident location on the map.');
       return;
     }
 
@@ -122,9 +132,15 @@ export default function ReportIncidentScreen() {
     try {
       const result = await createIncident({
         category: categoryByType[incidentType],
+        severity: priority,
         title: displayedIncidentType,
         description,
-        location: manualLocation.trim() ? { ...location, address: manualLocation.trim() } : location,
+        location: {
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude,
+          ...(selectedLocation.accuracy != null ? { accuracy: selectedLocation.accuracy } : {}),
+          ...(manualLocation.trim() ? { address: manualLocation.trim() } : {}),
+        },
         photoUris: photos,
       });
       setPhotoWarning(result.photoWarning);
@@ -138,7 +154,7 @@ export default function ReportIncidentScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -220,37 +236,14 @@ export default function ReportIncidentScreen() {
             <View>
               <Text style={styles.stepHeading}>Incident details</Text>
               <Text style={styles.introText}>Add the location, your observations and any supporting photos.</Text>
-              <Text style={styles.formLabel}>Location (auto-filled)</Text>
-              <View style={styles.readonlyField}>
-                <Ionicons name="location-outline" size={17} color={Colors.light.primaryDark} />
-                <Text style={[styles.fieldText, styles.locationValue]}>{coordinates}</Text>
-                <Ionicons name="checkmark-circle" size={17} color={Colors.light.primaryDark} />
-              </View>
-              <TouchableOpacity
-                style={styles.manualLocationToggle}
-                onPress={() => setIsEditingLocation((editing) => !editing)}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name={isEditingLocation ? 'close-circle-outline' : 'create-outline'}
-                  size={16}
-                  color={Colors.light.primaryDark}
-                />
-                <Text style={styles.manualLocationText}>
-                  {isEditingLocation ? 'Use auto-filled location' : 'Update location manually'}
-                </Text>
-              </TouchableOpacity>
-              {isEditingLocation && (
-                <TextInput
-                  style={styles.manualLocationInput}
-                  value={manualLocation}
-                  onChangeText={setManualLocation}
-                  placeholder="Enter coordinates or a location"
-                  placeholderTextColor="#8DA392"
-                  autoFocus
-                />
-              )}
-              <MapPreview />
+              <LocationLandmarkPicker
+                landmarkText={manualLocation}
+                onChangeLandmarkText={setManualLocation}
+                coords={selectedLocation}
+                onCoordsChange={setSelectedLocation}
+                locationSource={locationSource}
+                onLocationSourceChange={setLocationSource}
+              />
 
               <Text style={styles.formLabel}>Incident Type</Text>
               <TouchableOpacity
@@ -286,6 +279,28 @@ export default function ReportIncidentScreen() {
                   placeholderTextColor="#8DA392"
                 />
               )}
+
+              <Text style={styles.formLabel}>Incident priority</Text>
+              <Text style={styles.priorityHelp}>Choose the urgency based on the risks you observe.</Text>
+              <View style={styles.priorityGrid} accessibilityRole="radiogroup">
+                {PRIORITIES.map((option) => {
+                  const selected = priority === option.value;
+                  return <TouchableOpacity
+                    key={option.value}
+                    style={[styles.priorityOption, selected && { borderColor: option.color, backgroundColor: '#F1F5EF' }]}
+                    onPress={() => setPriority(option.value)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    accessibilityLabel={`${option.label} priority. ${option.hint}`}
+                  >
+                    <View style={styles.priorityOptionTop}>
+                      <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} size={20} color={option.color} />
+                      <Text style={[styles.priorityLabel, { color: option.color }]}>{option.label}</Text>
+                    </View>
+                    <Text style={styles.priorityHint}>{option.hint}</Text>
+                  </TouchableOpacity>;
+                })}
+              </View>
 
               <Text style={styles.formLabel}>Date &amp; Time</Text>
               <View style={styles.readonlyField}>
@@ -353,6 +368,7 @@ export default function ReportIncidentScreen() {
                 <SummaryRow label="Patrol ID:" value={patrolId} />
                 <SummaryRow label="Location:" value={coordinates} />
                 <SummaryRow label="Incident Type:" value={displayedIncidentType} />
+                <SummaryRow label="Priority:" value={PRIORITIES.find(option => option.value === priority)!.label} />
                 <SummaryRow label="Date & Time:" value={dateTime} />
                 <SummaryRow label="Short Description:" value={description || 'No description added'} />
                 {photos.map((uri, index) => <Image key={`${uri}-${index}`} source={{ uri }} style={styles.confirmationPhoto} resizeMode="contain" accessibilityLabel={`Incident photo ${index + 1}`} />)}
@@ -383,6 +399,7 @@ export default function ReportIncidentScreen() {
                 <SummaryRow label="Patrol ID:" value={patrolId} />
                 <SummaryRow label="Location:" value={coordinates} />
                 <SummaryRow label="Incident Type:" value={displayedIncidentType} />
+                <SummaryRow label="Priority:" value={PRIORITIES.find(option => option.value === priority)!.label} />
                 <SummaryRow label="Date & Time:" value={dateTime} />
                 <SummaryRow label="Short Description:" value={description || 'No description added'} />
                 {photos.map((uri, index) => (
@@ -424,27 +441,13 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MapPreview() {
-  return (
-    <View style={styles.mapPreview} accessibilityLabel="Map preview of the incident location">
-      <View style={styles.mapRoadHorizontal} />
-      <View style={styles.mapRoadDiagonal} />
-      <View style={styles.mapRiver} />
-      <View style={styles.mapPark}>
-        <Ionicons name="leaf" size={18} color="#8DBA91" />
-        <Ionicons name="leaf" size={13} color="#A8CAA7" />
-      </View>
-      <View style={styles.mapPin}>
-        <Ionicons name="location" size={30} color={Colors.light.primaryDark} />
-      </View>
-      <View style={styles.mapLabel}>
-        <Text style={styles.mapLabelText}>Incident location</Text>
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
+  priorityHelp: { fontSize: 13, color: '#53655B', lineHeight: 20, marginBottom: 12 },
+  priorityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  priorityOption: { flexGrow: 1, flexBasis: '45%', borderWidth: 2, borderColor: '#DCE3DC', borderRadius: 14, padding: 14, backgroundColor: '#FFFFFF', minHeight: 82 },
+  priorityOptionTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  priorityLabel: { fontSize: 15, fontWeight: '700' },
+  priorityHint: { fontSize: 12, color: '#43564A', marginTop: 8 },
   progress: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8DF', borderRadius: 16, paddingVertical: 16, paddingHorizontal: 8, marginBottom: 24 },
   progressStep: { flex: 1, alignItems: 'center', gap: 7 },
   progressCircle: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#EEF1E9', alignItems: 'center', justifyContent: 'center' },

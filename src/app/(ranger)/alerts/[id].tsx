@@ -1,12 +1,12 @@
+import { goBackOrReplace } from '../../../utils/navigation';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WildTrailBrand } from '../../../components/WildTrailBrand';
 import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
-  Image,
   ScrollView,
   Platform,
 } from 'react-native';
@@ -16,6 +16,7 @@ import Colors from '../../../constants/colors';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
 import { patrolApiService } from '../../../services/api/patrols';
+import { WildlifeAlertImage } from '../../../components/WildlifeAlertImage';
 
 export default function AlertDetailsScreen() {
   const router = useRouter();
@@ -36,9 +37,9 @@ export default function AlertDetailsScreen() {
 
   if (!alert) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => goBackOrReplace('/(ranger)/alerts')}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -50,12 +51,12 @@ export default function AlertDetailsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backBtn}
-          onPress={() => router.back()}
+          onPress={() => goBackOrReplace('/(ranger)/alerts')}
           activeOpacity={0.7}
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
@@ -68,7 +69,7 @@ export default function AlertDetailsScreen() {
         {/* Animal Overview Card */}
         <View style={styles.card}>
           <View style={styles.animalHeader}>
-            <Image source={{ uri: alert.image }} style={styles.animalImg} />
+            <WildlifeAlertImage uri={alert.image} species={alert.species} animalId={alert.animalId} style={styles.animalImg} />
             <View style={styles.animalInfo}>
               <Text style={styles.animalId}>{alert.animalId}</Text>
               <Text style={styles.speciesName}>{alert.species}</Text>

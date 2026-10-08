@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WildTrailBrand } from '../../components/WildTrailBrand';
 import React, { useState, useEffect } from 'react';
 import {
@@ -5,7 +6,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
   Platform,
   Alert,
@@ -373,7 +373,7 @@ export default function PatrolScreen() {
   const currentDistanceKm = calculatePathDistance(actualPath);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Top Header Navigation Bar */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>

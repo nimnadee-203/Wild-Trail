@@ -4,6 +4,7 @@ export type ManagerSection =
   | 'alerts'
   | 'patrols'
   | 'incidents'
+  | 'community-reports'
   | 'reports';
 
 export const managerSections: Array<{ key: ManagerSection; label: string; icon: string }> = [
@@ -11,7 +12,8 @@ export const managerSections: Array<{ key: ManagerSection; label: string; icon: 
   { key: 'monitoring', label: 'Live Monitoring', icon: 'videocam-outline' },
   { key: 'alerts', label: 'Alerts & Response', icon: 'notifications-outline' },
   { key: 'patrols', label: 'Patrols', icon: 'walk-outline' },
-  { key: 'incidents', label: 'Incidents & Community', icon: 'people-outline' },
+  { key: 'incidents', label: 'Incidents', icon: 'people-outline' },
+  { key: 'community-reports', label: 'Community Reports', icon: 'people-circle-outline' },
   { key: 'reports', label: 'Reports', icon: 'bar-chart-outline' },
 ];
 

@@ -61,6 +61,15 @@ export default function RangerLayout() {
         }}
       />
       <Tabs.Screen
+        name="incident-reports"
+        options={{
+          title: 'Incidents',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'documents' : 'documents-outline'} size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="alerts"
         options={{
           title: 'Alerts',
@@ -87,7 +96,6 @@ export default function RangerLayout() {
       />
 
       {/* Sub-screens accessed via actions, hidden from bottom tab icons */}
-      <Tabs.Screen name="incident-reports" options={{ href: null, title: 'My Incident Reports' }} />
       <Tabs.Screen
         name="map"
         options={{

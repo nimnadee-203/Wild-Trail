@@ -43,7 +43,7 @@ const source = ts.transpileModule(fs.readFileSync('src/services/communityReports
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true },
 }).outputText;
 const exportsObject = {};
-vm.runInNewContext(source, { exports: exportsObject, require: (name) => {
+vm.runInNewContext(source, { window: {}, exports: exportsObject, require: (name) => {
   assert.ok(modules[name], `Unexpected dependency ${name}`);
   return modules[name];
 } });
