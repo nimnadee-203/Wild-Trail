@@ -13,19 +13,116 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import Colors from '../../constants/colors';
 import { storageService } from '../../storage/asyncStorage';
 import { STORAGE_KEYS } from '../../storage/keys';
 import { userService } from '../../services/api/users';
+import { StaffUser } from '../../types/user';
+
+const PRESET_AVATARS = [
+  {
+    id: '1',
+    label: 'Senior Officer',
+    uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
+  },
+  {
+    id: '2',
+    label: 'Field Ranger',
+    uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+  },
+  {
+    id: '3',
+    label: 'Wildlife Warden',
+    uri: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
+  },
+  {
+    id: '4',
+    label: 'Conservation Lead',
+    uri: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80',
+  },
+];
 
 export default function ProfileScreen() {
   const router = useRouter();
   const [highAccuracyGps, setHighAccuracyGps] = useState(true);
   const [criticalPushAlerts, setCriticalPushAlerts] = useState(true);
   const [offlineMapCache, setOfflineMapCache] = useState(true);
+
+  // Avatar & Profile State
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarModalVisible, setAvatarModalVisible] = useState(false);
+  const [userProfile, setUserProfile] = useState<StaffUser | null>(null);
+
+  React.useEffect(() => {
+    async function loadProfileData() {
+      const savedAvatar = await storageService.getItem<string>(STORAGE_KEYS.RANGER_AVATAR);
+      if (savedAvatar) {
+        setAvatarUri(savedAvatar);
+      } else {
+        setAvatarUri(PRESET_AVATARS[0].uri);
+      }
+
+      const profile = await storageService.getItem<StaffUser>(STORAGE_KEYS.USER_PROFILE);
+      if (profile) {
+        setUserProfile(profile);
+      }
+    }
+    loadProfileData();
+  }, []);
+
+  const saveNewAvatar = async (uri: string) => {
+    setAvatarUri(uri);
+    await storageService.setItem(STORAGE_KEYS.RANGER_AVATAR, uri);
+    setAvatarModalVisible(false);
+    if (Platform.OS === 'web') {
+      window.alert('Profile photo updated successfully!');
+    } else {
+      Alert.alert('Profile Photo Updated', 'Your ranger profile picture has been saved.');
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedUri = result.assets[0].uri;
+        await saveNewAvatar(selectedUri);
+      }
+    } catch {
+      Alert.alert('Error', 'Unable to access photo library.');
+    }
+  };
+
+  const handleTakeCameraPhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera access is required to take a new profile photo.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const capturedUri = result.assets[0].uri;
+        await saveNewAvatar(capturedUri);
+      }
+    } catch {
+      Alert.alert('Error', 'Unable to open camera.');
+    }
+  };
 
   // Change Password Modal State
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
@@ -143,24 +240,45 @@ export default function ProfileScreen() {
         {/* Officer Credentials Card */}
         <View style={styles.officerCard}>
           <View style={styles.officerTop}>
-            <View style={styles.avatarWrap}>
-              <Ionicons name="person" size={36} color="#FFFFFF" />
-            </View>
+            <TouchableOpacity
+              style={styles.avatarContainer}
+              onPress={() => setAvatarModalVisible(true)}
+              activeOpacity={0.85}
+            >
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarWrap}>
+                  <Ionicons name="person" size={36} color="#FFFFFF" />
+                </View>
+              )}
+              <View style={styles.avatarEditBadge}>
+                <Ionicons name="camera" size={12} color="#FFFFFF" />
+              </View>
+            </TouchableOpacity>
             <View style={styles.officerInfo}>
               <View style={styles.officerNameRow}>
-                <Text style={styles.officerName}>Officer Meranga</Text>
+                <Text style={styles.officerName}>
+                  {userProfile?.name ? `Officer ${userProfile.name}` : 'Officer Nimal Perera'}
+                </Text>
                 <View style={styles.badgePill}>
-                  <Text style={styles.badgePillText}>ACTIVE</Text>
+                  <Text style={styles.badgePillText}>{userProfile?.accountStatus || 'ACTIVE'}</Text>
                 </View>
               </View>
-              <Text style={styles.officerRole}>Senior Field Ranger • Sector 4 Lead</Text>
-              <Text style={styles.badgeNum}>Badge: RANGER-409</Text>
+              <Text style={styles.officerRole}>
+                Senior Field Ranger • {userProfile?.zoneId ? userProfile.zoneId.toUpperCase() : 'BLOCK-01'} Lead
+              </Text>
+              <Text style={styles.badgeNum}>
+                Badge: {userProfile?.badge || userProfile?.staffId || 'RG-204'} • {userProfile?.email || 'nimal@wildguard.org'}
+              </Text>
             </View>
           </View>
 
           <View style={styles.stationRow}>
             <Ionicons name="business-outline" size={15} color="#4B5563" />
-            <Text style={styles.stationText}>Southern Wildlife Conservation Post, Sector 4</Text>
+            <Text style={styles.stationText}>
+              {userProfile?.parkId ? userProfile.parkId.toUpperCase() : 'YALA'} NP Conservation Post, {userProfile?.zoneId ? userProfile.zoneId.toUpperCase() : 'BLOCK-01'}
+            </Text>
           </View>
         </View>
 
@@ -428,6 +546,98 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Profile Picture Change Modal */}
+      <Modal
+        visible={avatarModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAvatarModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContentCard}>
+            <View style={styles.modalHeaderRow}>
+              <View style={styles.modalTitleGroup}>
+                <Ionicons name="camera" size={22} color={Colors.light.primaryDark} />
+                <Text style={styles.modalTitleText}>Update Profile Photo</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setAvatarModalVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={22} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ marginVertical: 12 }}>
+              {/* Image Source Options Grid */}
+              <Text style={styles.inputFieldLabel}>CHOOSE PHOTO SOURCE</Text>
+              <View style={styles.photoSourceRow}>
+                <TouchableOpacity
+                  style={styles.photoSourceCard}
+                  onPress={handlePickFromGallery}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.photoSourceIconWrap, { backgroundColor: '#DCFCE7' }]}>
+                    <Ionicons name="images" size={22} color="#15803D" />
+                  </View>
+                  <Text style={styles.photoSourceTitle}>Choose Photo</Text>
+                  <Text style={styles.photoSourceSub}>From Gallery</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.photoSourceCard}
+                  onPress={handleTakeCameraPhoto}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.photoSourceIconWrap, { backgroundColor: '#FEF3C7' }]}>
+                    <Ionicons name="camera" size={22} color="#B45309" />
+                  </View>
+                  <Text style={styles.photoSourceTitle}>Take Photo</Text>
+                  <Text style={styles.photoSourceSub}>Using Camera</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Preset Ranger Avatars Selector */}
+              <Text style={styles.inputFieldLabel}>OR CHOOSE PRESET RANGER AVATAR</Text>
+              <View style={styles.presetAvatarGrid}>
+                {PRESET_AVATARS.map((item) => {
+                  const isSelected = avatarUri === item.uri;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[
+                        styles.presetAvatarCard,
+                        isSelected && styles.presetAvatarCardSelected,
+                      ]}
+                      onPress={() => saveNewAvatar(item.uri)}
+                      activeOpacity={0.8}
+                    >
+                      <Image source={{ uri: item.uri }} style={styles.presetAvatarImg} />
+                      <Text style={styles.presetAvatarLabel}>{item.label}</Text>
+                      {isSelected && (
+                        <View style={styles.presetSelectedBadge}>
+                          <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity
+                style={styles.cancelPasswordBtn}
+                onPress={() => setAvatarModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelPasswordBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -505,11 +715,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  avatarContainer: {
+    position: 'relative',
+  },
   avatarWrap: {
     width: 60,
     height: 60,
     borderRadius: 30,
     backgroundColor: Colors.light.primaryDark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: Colors.light.primary,
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: Colors.light.primaryDark,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -827,5 +1060,76 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     fontSize: 14,
     fontWeight: '700',
+  },
+
+  // Photo Source Cards & Preset Avatars Grid
+  photoSourceRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginVertical: 6,
+  },
+  photoSourceCard: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+  },
+  photoSourceIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  photoSourceTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  photoSourceSub: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  presetAvatarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 8,
+  },
+  presetAvatarCard: {
+    width: '48%',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 10,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  presetAvatarCardSelected: {
+    borderColor: Colors.light.primary,
+    backgroundColor: '#ECFDF5',
+  },
+  presetAvatarImg: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    marginBottom: 6,
+  },
+  presetAvatarLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+    textAlign: 'center',
+  },
+  presetSelectedBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
   },
 });

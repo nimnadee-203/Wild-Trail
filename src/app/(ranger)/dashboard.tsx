@@ -19,8 +19,11 @@ import Colors from '../../constants/colors';
 import { PatrolRouteMap } from '../../components/manager/PatrolRouteMap';
 
 import { AssignedPatrol, RangerStatus } from '../../types/patrol';
+import { StaffUser } from '../../types/user';
 import { patrolApiService, MOCK_ASSIGNED_PATROLS } from '../../services/api/patrols';
 import { offlineSyncService } from '../../services/api/offlineSync';
+import { storageService } from '../../storage/asyncStorage';
+import { STORAGE_KEYS } from '../../storage/keys';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -30,11 +33,17 @@ export default function DashboardScreen() {
   const [selectedPatrol, setSelectedPatrol] = useState<AssignedPatrol | null>(null);
   const [rangerStatus, setRangerStatus] = useState<RangerStatus>('AVAILABLE');
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [userProfile, setUserProfile] = useState<StaffUser | null>(null);
 
   const fetchPatrols = async () => {
     try {
       const status = await patrolApiService.getRangerStatus();
       setRangerStatus(status);
+
+      const profile = await storageService.getItem<StaffUser>(STORAGE_KEYS.USER_PROFILE);
+      if (profile) {
+        setUserProfile(profile);
+      }
 
       const queue = await offlineSyncService.getQueue();
       const pending = queue.filter((item) => item.status === 'PENDING_SYNC').length;
@@ -453,10 +462,12 @@ export default function DashboardScreen() {
         <View style={styles.shiftCard}>
           <View style={styles.shiftHeader}>
             <Ionicons name="person-circle-outline" size={24} color={Colors.light.primaryDark} />
-            <Text style={styles.shiftTitle}>Duty Officer: RANGER-409 (Meranga)</Text>
+            <Text style={styles.shiftTitle}>
+              Duty Officer: {userProfile?.badge || userProfile?.staffId || 'RG-204'} ({userProfile?.name || 'Nimal Perera'})
+            </Text>
           </View>
           <Text style={styles.shiftText}>
-            Assigned: Sector 4 Southern Boundary • Base Radio VHF Channel 12 • SOS Emergency Active
+            Assigned: {userProfile?.parkId ? userProfile.parkId.toUpperCase() : 'YALA'} NP {userProfile?.zoneId ? userProfile.zoneId.toUpperCase() : 'BLOCK 01'} • Base Radio VHF Channel 12 • SOS Emergency Active
           </Text>
         </View>
 

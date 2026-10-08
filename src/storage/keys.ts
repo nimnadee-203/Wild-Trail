@@ -11,6 +11,7 @@ export const STORAGE_KEYS = {
   NETWORK_STATUS: '@wildlife_network_status',
   STAFF_USERS: '@wildlife_staff_users',
   MOCK_RANGERS: '@wildlife_mock_rangers',
+  RANGER_AVATAR: '@wildlife_ranger_avatar',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS];
