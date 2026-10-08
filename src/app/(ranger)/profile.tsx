@@ -1,10 +1,12 @@
+import { useRangerIdentity } from '../../hooks/useRangerIdentity';
+import { RangerAvatar } from '../../components/RangerAvatar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WildTrailBrand } from '../../components/WildTrailBrand';
 import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Switch,
@@ -23,6 +25,7 @@ import { userService } from '../../services/api/users';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const identity = useRangerIdentity();
   const [highAccuracyGps, setHighAccuracyGps] = useState(true);
   const [criticalPushAlerts, setCriticalPushAlerts] = useState(true);
   const [offlineMapCache, setOfflineMapCache] = useState(true);
@@ -114,7 +117,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       {/* Top Header Navigation Bar */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -144,23 +147,23 @@ export default function ProfileScreen() {
         <View style={styles.officerCard}>
           <View style={styles.officerTop}>
             <View style={styles.avatarWrap}>
-              <Ionicons name="person" size={36} color="#FFFFFF" />
+              <RangerAvatar name={identity.name} uri={identity.photo} />
             </View>
             <View style={styles.officerInfo}>
               <View style={styles.officerNameRow}>
-                <Text style={styles.officerName}>Officer Meranga</Text>
+                <Text style={styles.officerName}>{identity.name}</Text>
                 <View style={styles.badgePill}>
                   <Text style={styles.badgePillText}>ACTIVE</Text>
                 </View>
               </View>
-              <Text style={styles.officerRole}>Senior Field Ranger • Sector 4 Lead</Text>
-              <Text style={styles.badgeNum}>Badge: RANGER-409</Text>
+              <Text style={styles.officerRole}>Field Ranger</Text>
+              <Text style={styles.badgeNum}>Badge: {identity.badge}</Text>
             </View>
           </View>
 
           <View style={styles.stationRow}>
             <Ionicons name="business-outline" size={15} color="#4B5563" />
-            <Text style={styles.stationText}>Southern Wildlife Conservation Post, Sector 4</Text>
+            <Text style={styles.stationText}>{identity.station}</Text>
           </View>
         </View>
 
@@ -201,7 +204,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => router.push('/report-incident')}
+            onPress={() => router.push('/(ranger)/report-incident')}
             activeOpacity={0.7}
           >
             <View style={[styles.menuIconWrap, { backgroundColor: '#FEF3C7' }]}>

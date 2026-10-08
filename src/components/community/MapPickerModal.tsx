@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { APP_CONFIG } from '../../constants/config';
+import { CommunityLocationMap } from './CommunityLocationMap';
 
 export interface LocationCoords {
   latitude: number;
@@ -191,7 +192,7 @@ function MapPickerModalContent({
         </View>
 
         <Text style={styles.subtitle}>
-          Click anywhere on the map or choose a preset gate to position the incident pin.
+          Tap the map, drag the pin, or choose a preset gate to mark the incident location.
         </Text>
 
         {/* Quick Presets */}
@@ -233,16 +234,7 @@ function MapPickerModalContent({
               }}
             />
           ) : (
-            <View style={styles.mobileFallback}>
-              <Ionicons name="location" size={48} color="#166534" />
-              <Text style={styles.mobileFallbackText}>
-                Lat: {selectedPin.latitude.toFixed(5)}, Lng:{' '}
-                {selectedPin.longitude.toFixed(5)}
-              </Text>
-              <Text style={styles.mobileFallbackSub}>
-                (Use preset buttons above to position the boundary marker)
-              </Text>
-            </View>
+            <CommunityLocationMap coords={selectedPin} onChange={setSelectedPin} />
           )}
         </View>
 

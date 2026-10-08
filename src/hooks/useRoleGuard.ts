@@ -9,12 +9,17 @@ export function useRoleGuard(allowedRoles: UserRole[]) {
   const segments = useSegments();
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  // Layouts pass inline arrays; compare their contents to avoid rechecking on
+  // every loading-state render and unmounting the active screen repeatedly.
+  const allowedRolesKey = allowedRoles.join('|');
+  const routeKey = segments.join('/');
 
   useEffect(() => {
     let isMounted = true;
 
     async function checkUserRole() {
-      setIsChecking(true);
+      // Only the initial check blocks rendering. Unmounting Tabs during a route
+      // change discards its navigation state and can return to the dashboard.
       const userProfile = await storageService.getItem<StaffUser>(STORAGE_KEYS.USER_PROFILE);
 
       if (!isMounted) return;
@@ -34,7 +39,7 @@ export function useRoleGuard(allowedRoles: UserRole[]) {
         return;
       }
 
-      if (!allowedRoles.includes(userProfile.role)) {
+      if (!allowedRolesKey.split('|').includes(userProfile.role)) {
         setIsAuthorized(false);
         setIsChecking(false);
 
@@ -65,7 +70,7 @@ export function useRoleGuard(allowedRoles: UserRole[]) {
     return () => {
       isMounted = false;
     };
-  }, [allowedRoles, router, segments]);
+  }, [allowedRolesKey, router, routeKey]);
 
   return { isChecking, isAuthorized };
 }

@@ -12,10 +12,11 @@ import { db } from '../firebase';
 import { DEFAULT_INCIDENT_RANGER, getIncidentReporter } from '../incidentReporter';
 import { uploadIncidentPhoto } from '../cloudinary';
 import { apiFetch, ApiResponse } from './client';
-import { ConflictReport, IncidentCategory, IncidentReport, LocationData } from '../../types/incident';
+import { ConflictReport, IncidentCategory, IncidentReport, IncidentSeverity, LocationData } from '../../types/incident';
 
 export interface CreateIncidentInput {
   category: IncidentCategory;
+  severity?: IncidentSeverity;
   title: string;
   description: string;
   location: LocationData;
@@ -59,7 +60,7 @@ export async function createIncident(input: CreateIncidentInput): Promise<Create
     reporterId,
     ...reporterDetails,
     category: input.category,
-    severity: 'medium',
+    severity: input.severity ?? 'medium',
     status: 'pending',
     title: input.title.trim(),
     description,
@@ -97,7 +98,7 @@ export async function createIncident(input: CreateIncidentInput): Promise<Create
     reporterId,
     ...reporterDetails,
     category: input.category,
-    severity: 'medium',
+    severity: input.severity ?? 'medium',
     status: 'pending',
     title: input.title.trim(),
     description,

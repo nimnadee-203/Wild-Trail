@@ -3,6 +3,7 @@ export type UserRole = 'ranger' | 'manager' | 'liaison' | 'admin' | 'community';
 export type AccountStatus = 'ACTIVE' | 'DISABLED';
 
 export interface StaffUser {
+  photoURL?: string;
   uid: string;
   name: string;
   email: string;

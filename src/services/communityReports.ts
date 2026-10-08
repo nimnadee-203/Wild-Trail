@@ -120,7 +120,8 @@ export function subscribeNetworkStatus(callback: (online: boolean) => void): () 
   };
 }
 
-if (typeof window !== 'undefined') {
+// Native runtimes can expose window without browser event APIs.
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('online', () => {
     notifyNetworkChange();
   });
