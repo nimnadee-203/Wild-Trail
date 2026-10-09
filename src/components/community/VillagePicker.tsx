@@ -1,3 +1,4 @@
+import { useCommunityLanguage } from './CommunityLanguage';
 import React, { useState } from 'react';
 import {
   Modal,
@@ -39,19 +40,20 @@ export function VillagePicker({
   customVillage,
   onCustomChange,
 }: VillagePickerProps) {
+  const { t } = useCommunityLanguage();
   const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState('');
 
   const filteredVillages = PARK_VILLAGES.filter((v) =>
-    v.toLowerCase().includes(search.toLowerCase())
+    [v, t(v)].some(label => label.toLowerCase().includes(search.toLowerCase()))
   );
 
   const isOther = value === 'Other';
   const displayLabel = value
     ? isOther && customVillage.trim()
-      ? `Other: ${customVillage.trim()}`
-      : value
-    : 'Select your village';
+      ? `${t("Other")}: ${customVillage.trim()}`
+      : t(value)
+    : t('Select your village');
 
   const handleSelect = (selected: VillageOption) => {
     onChange(selected);
@@ -62,7 +64,7 @@ export function VillagePicker({
   return (
     <View style={styles.container}>
       <Text style={styles.label}>
-        Village <Text style={styles.required}>*</Text>
+        {t("Village")}{' '}<Text style={styles.required}>*</Text>
       </Text>
 
       {/* Trigger Button */}
@@ -70,13 +72,13 @@ export function VillagePicker({
         style={[styles.trigger, !!value && styles.triggerActive]}
         onPress={() => setModalOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel="Select your village"
+        accessibilityLabel={t("Select your village")}
       >
         <View style={styles.triggerLeft}>
           <Ionicons
             name="business-outline"
             size={18}
-            color={value ? '#166534' : '#6B7280'}
+            color={value ? '#166534' : "#6B7280"}
           />
           <Text
             style={[styles.triggerText, !value && styles.placeholderText]}
@@ -86,23 +88,23 @@ export function VillagePicker({
           </Text>
         </View>
         <Ionicons
-          name={modalOpen ? 'chevron-up' : 'chevron-down'}
+          name={modalOpen ? "chevron-up" : "chevron-down"}
           size={18}
-          color={value ? '#166534' : '#6B7280'}
+          color={value ? '#166534' : "#6B7280"}
         />
       </Pressable>
 
       {/* Custom input when "Other" is selected */}
       {isOther && (
         <View style={styles.customContainer}>
-          <Text style={styles.subLabel}>Specify your village name:</Text>
+          <Text style={styles.subLabel}>{t("Specify your village name:")}</Text>
           <TextInput
             style={styles.customInput}
             value={customVillage}
             onChangeText={onCustomChange}
-            placeholder="Type your village name..."
+            placeholder={t("Type your village name...")}
             placeholderTextColor="#9CA3AF"
-            accessibilityLabel="Specify your village name"
+            accessibilityLabel={t("Specify your village name")}
           />
         </View>
       )}
@@ -125,7 +127,7 @@ export function VillagePicker({
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleRow}>
                 <Ionicons name="location" size={20} color="#166534" />
-                <Text style={styles.modalTitle}>Select your village</Text>
+                <Text style={styles.modalTitle}>{t("Select your village")}</Text>
               </View>
               <Pressable
                 onPress={() => setModalOpen(false)}
@@ -143,7 +145,7 @@ export function VillagePicker({
                 style={styles.searchInput}
                 value={search}
                 onChangeText={setSearch}
-                placeholder="Search village name..."
+                placeholder={t("Search village name...")}
                 placeholderTextColor="#9CA3AF"
                 autoFocus={false}
               />
@@ -170,9 +172,9 @@ export function VillagePicker({
                   >
                     <View style={styles.optionLeft}>
                       <Ionicons
-                        name={item === 'Other' ? 'create-outline' : 'home-outline'}
+                        name={item === 'Other' ? "create-outline" : "home-outline"}
                         size={17}
-                        color={selected ? '#166534' : '#4B5563'}
+                        color={selected ? '#166534' : "#4B5563"}
                       />
                       <Text
                         style={[
@@ -180,7 +182,7 @@ export function VillagePicker({
                           selected && styles.optionTextSelected,
                         ]}
                       >
-                        {item === 'Other' ? 'Other (type custom name)' : item}
+                        {item === 'Other' ? t("Other (type custom name)") : t(item)}
                       </Text>
                     </View>
                     {selected && (
@@ -192,14 +194,14 @@ export function VillagePicker({
               {filteredVillages.length === 0 && (
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyText}>
-                    {`No village matches "${search}"`}
+                    {`${t('No village matches')}: ${search}`}
                   </Text>
                   <Pressable
                     style={styles.selectOtherBtn}
                     onPress={() => handleSelect('Other')}
                   >
                     <Text style={styles.selectOtherBtnText}>
-                      {'Use "Other" & type custom name'}
+                      {t("Use \"Other\" & type custom name")}
                     </Text>
                   </Pressable>
                 </View>

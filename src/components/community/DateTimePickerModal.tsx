@@ -1,3 +1,4 @@
+import { useCommunityLanguage } from './CommunityLanguage';
 import React, { useState } from 'react';
 import {
   Modal,
@@ -34,6 +35,7 @@ function formatLocalDateTime(date: Date): string {
 }
 
 export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
+  const { t, language } = useCommunityLanguage();
   const [modalOpen, setModalOpen] = useState(false);
   const currentDate = parseLocalDateTime(value);
 
@@ -107,17 +109,17 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
   };
 
   // Friendly formatted label
-  const readableLabel = `${currentDate.toLocaleDateString(undefined, {
+  const readableLabel = `${currentDate.toLocaleDateString(language === 'en' ? 'en-GB' : language === 'si' ? 'si-LK' : 'ta-LK', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  })} at ${pad(currentDate.getHours())}:${pad(currentDate.getMinutes())}`;
+  })} · ${pad(currentDate.getHours())}:${pad(currentDate.getMinutes())}`;
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>
-        Event Date and Time <Text style={styles.required}>*</Text>
+        {t("Event Date and Time")}{' '}<Text style={styles.required}>*</Text>
       </Text>
 
       <View style={styles.row}>
@@ -126,7 +128,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
           style={styles.pickerTrigger}
           onPress={handleOpen}
           accessibilityRole="button"
-          accessibilityLabel="Open date and time picker"
+          accessibilityLabel={t("Open date and time picker")}
         >
           <View style={styles.triggerLeft}>
             <Ionicons name="calendar-outline" size={18} color="#166534" />
@@ -140,10 +142,10 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
           style={styles.nowButton}
           onPress={handleSetNow}
           accessibilityRole="button"
-          accessibilityLabel="Set event time to right now"
+          accessibilityLabel={t("Set event time to right now")}
         >
           <Ionicons name="flash-outline" size={14} color="#166534" />
-          <Text style={styles.nowText}>Now</Text>
+          <Text style={styles.nowText}>{t("Now")}</Text>
         </Pressable>
       </View>
 
@@ -178,7 +180,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleRow}>
                 <Ionicons name="calendar" size={20} color="#166534" />
-                <Text style={styles.modalTitle}>Choose Date & Time</Text>
+                <Text style={styles.modalTitle}>{t("Choose Date & Time")}</Text>
               </View>
               <Pressable onPress={() => setModalOpen(false)} hitSlop={8}>
                 <Ionicons name="close" size={22} color="#4B5563" />
@@ -187,30 +189,30 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
 
             {/* Quick Presets */}
             <View style={styles.quickRow}>
-              <Text style={styles.quickLabel}>Presets:</Text>
+              <Text style={styles.quickLabel}>{t("Presets:")}</Text>
               <Pressable
                 style={styles.quickChip}
                 onPress={() => handleQuickPreset('now')}
               >
-                <Text style={styles.quickChipText}>Right Now</Text>
+                <Text style={styles.quickChipText}>{t("Right Now")}</Text>
               </Pressable>
               <Pressable
                 style={styles.quickChip}
                 onPress={() => handleQuickPreset('oneHourAgo')}
               >
-                <Text style={styles.quickChipText}>1 hr ago</Text>
+                <Text style={styles.quickChipText}>{t("1 hr ago")}</Text>
               </Pressable>
               <Pressable
                 style={styles.quickChip}
                 onPress={() => handleQuickPreset('morning')}
               >
-                <Text style={styles.quickChipText}>Morning (07:30)</Text>
+                <Text style={styles.quickChipText}>{t("Morning (07:30)")}</Text>
               </Pressable>
               <Pressable
                 style={styles.quickChip}
                 onPress={() => handleQuickPreset('dusk')}
               >
-                <Text style={styles.quickChipText}>Dusk (18:00)</Text>
+                <Text style={styles.quickChipText}>{t("Dusk (18:00)")}</Text>
               </Pressable>
             </View>
 
@@ -225,7 +227,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
                 <Ionicons name="chevron-back" size={18} color="#166534" />
               </Pressable>
               <Text style={styles.monthTitle}>
-                {activeMonth.toLocaleDateString(undefined, {
+                {activeMonth.toLocaleDateString(language === 'en' ? 'en-GB' : language === 'si' ? 'si-LK' : 'ta-LK', {
                   month: 'long',
                   year: 'numeric',
                 })}
@@ -244,7 +246,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
             <View style={styles.weekdaysRow}>
               {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((w) => (
                 <Text key={w} style={styles.weekdayText}>
-                  {w}
+                  {t(w)}
                 </Text>
               ))}
             </View>
@@ -294,7 +296,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
               <View style={styles.timeHeader}>
                 <Ionicons name="time" size={16} color="#166534" />
                 <Text style={styles.timeTitle}>
-                  Select Time ({pad(draftDate.getHours())}:
+                  {t("Select Time (")}{pad(draftDate.getHours())}:
                   {pad(draftDate.getMinutes())})
                 </Text>
               </View>
@@ -328,7 +330,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
 
               {/* Minutes row */}
               <View style={styles.minutesRow}>
-                <Text style={styles.minLabel}>Min:</Text>
+                <Text style={styles.minLabel}>{t("Min:")}</Text>
                 {[0, 15, 30, 45].map((m) => {
                   const sel = draftDate.getMinutes() === m;
                   return (
@@ -357,10 +359,10 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
                 style={styles.cancelBtn}
                 onPress={() => setModalOpen(false)}
               >
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={styles.cancelText}>{t("Cancel")}</Text>
               </Pressable>
               <Pressable style={styles.applyBtn} onPress={handleApply}>
-                <Text style={styles.applyText}>Apply Date & Time</Text>
+                <Text style={styles.applyText}>{t("Apply Date & Time")}</Text>
               </Pressable>
             </View>
           </Pressable>

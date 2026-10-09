@@ -1,3 +1,4 @@
+import { useCommunityLanguage } from './CommunityLanguage';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -29,6 +30,7 @@ export function LocationLandmarkPicker({
   locationSource,
   onLocationSourceChange,
 }: LocationLandmarkPickerProps) {
+  const { t, translateError } = useCommunityLanguage();
   const [fetchingGps, setFetchingGps] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [mapModalOpen, setMapModalOpen] = useState(false);
@@ -41,7 +43,7 @@ export function LocationLandmarkPicker({
       if (status !== 'granted') {
         const msg = 'Location permission is required to fetch current GPS coordinates.';
         setGpsError(msg);
-        Alert.alert('Permission Denied', msg);
+        Alert.alert(t('Permission Denied'), t(msg));
         return;
       }
 
@@ -60,7 +62,7 @@ export function LocationLandmarkPicker({
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unable to acquire current location.';
       setGpsError(msg);
-      Alert.alert('Location Error', msg);
+      Alert.alert(t('Location Error'), translateError(msg));
     } finally {
       setFetchingGps(false);
     }
@@ -79,10 +81,9 @@ export function LocationLandmarkPicker({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionLabel}>Nearby landmark / location</Text>
+      <Text style={styles.sectionLabel}>{t("Nearby landmark / location")}</Text>
       <Text style={styles.sectionHint}>
-        Pinpoint the incident area with your GPS, pick a spot on the map, and add an optional landmark.
-      </Text>
+        {t("Pinpoint the incident area with your GPS, pick a spot on the map, and add an optional landmark.")}{' '}</Text>
 
       {/* Action Buttons: Current Location or Map */}
       <View style={styles.actionsRow}>
@@ -95,7 +96,7 @@ export function LocationLandmarkPicker({
           onPress={handleUseCurrentLocation}
           disabled={fetchingGps}
           accessibilityRole="button"
-          accessibilityLabel="Use my current location"
+          accessibilityLabel={t("Use my current location")}
         >
           {fetchingGps ? (
             <ActivityIndicator size="small" color="#166534" />
@@ -103,7 +104,7 @@ export function LocationLandmarkPicker({
             <Ionicons
               name="navigate-outline"
               size={18}
-              color={locationSource === 'gps' ? '#FFFFFF' : '#166534'}
+              color={locationSource === 'gps' ? "#FFFFFF" : '#166534'}
             />
           )}
           <Text
@@ -112,7 +113,7 @@ export function LocationLandmarkPicker({
               locationSource === 'gps' && styles.actionButtonTextActive,
             ]}
           >
-            {fetchingGps ? 'Locating…' : 'Use my current location'}
+            {fetchingGps ? t("Locating…") : t("Use my current location")}
           </Text>
         </Pressable>
 
@@ -123,12 +124,12 @@ export function LocationLandmarkPicker({
           ]}
           onPress={() => setMapModalOpen(true)}
           accessibilityRole="button"
-          accessibilityLabel="Select location on map"
+          accessibilityLabel={t("Select location on map")}
         >
           <Ionicons
             name="map-outline"
             size={18}
-            color={locationSource === 'map' ? '#FFFFFF' : '#166534'}
+            color={locationSource === 'map' ? "#FFFFFF" : '#166534'}
           />
           <Text
             style={[
@@ -136,8 +137,7 @@ export function LocationLandmarkPicker({
               locationSource === 'map' && styles.actionButtonTextActive,
             ]}
           >
-            Select location on map
-          </Text>
+            {t("Select location on map")}{' '}</Text>
         </Pressable>
       </View>
 
@@ -145,7 +145,7 @@ export function LocationLandmarkPicker({
       {!!gpsError && (
         <View style={styles.errorBox}>
           <Ionicons name="alert-circle-outline" size={16} color="#B91C1C" />
-          <Text style={styles.errorText}>{gpsError}</Text>
+          <Text style={styles.errorText}>{translateError(gpsError)}</Text>
         </View>
       )}
 
@@ -154,19 +154,18 @@ export function LocationLandmarkPicker({
         <View style={styles.coordsCard}>
           <View style={styles.coordsLeft}>
             <Ionicons
-              name={locationSource === 'gps' ? 'navigate' : 'pin'}
+              name={locationSource === 'gps' ? "navigate" : "pin"}
               size={18}
               color="#166534"
             />
             <View>
               <Text style={styles.coordsTitle}>
                 {locationSource === 'gps'
-                  ? 'Current Device GPS Captured'
-                  : 'Location Pinned on Map'}
+                  ? t("Current Device GPS Captured")
+                  : t("Location Pinned on Map")}
               </Text>
               <Text style={styles.coordsSub}>
-                {coords.latitude.toFixed(5)}° N, {coords.longitude.toFixed(5)}° E
-                {coords.accuracy ? ` (±${coords.accuracy}m)` : ''}
+                {coords.latitude.toFixed(5)}{t("° N,")}{' '}{coords.longitude.toFixed(5)}{t("° E")}{' '}{coords.accuracy ? ` (±${coords.accuracy}m)` : ''}
               </Text>
             </View>
           </View>
@@ -174,7 +173,7 @@ export function LocationLandmarkPicker({
             onPress={handleClearCoords}
             hitSlop={8}
             style={styles.clearBtn}
-            accessibilityLabel="Remove selected coordinates"
+            accessibilityLabel={t("Remove selected coordinates")}
           >
             <Ionicons name="close-circle" size={20} color="#6B7280" />
           </Pressable>
@@ -184,15 +183,15 @@ export function LocationLandmarkPicker({
       {/* Optionally: Nearby Landmark */}
       <View style={styles.landmarkField}>
         <Text style={styles.landmarkLabel}>
-          Nearby landmark <Text style={styles.optional}>(optional)</Text>
+          {t("Nearby landmark")}{' '}<Text style={styles.optional}>{t("(optional)")}</Text>
         </Text>
         <TextInput
           style={styles.input}
           value={landmarkText}
           onChangeText={onChangeLandmarkText}
-          placeholder="e.g. Near big banyan tree, Behind water tank, Culvert #4"
+          placeholder={t("e.g. Near big banyan tree, Behind water tank, Culvert #4")}
           placeholderTextColor="#9CA3AF"
-          accessibilityLabel="Nearby landmark optional"
+          accessibilityLabel={t("Nearby landmark optional")}
         />
       </View>
 

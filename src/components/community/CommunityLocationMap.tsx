@@ -1,3 +1,4 @@
+import { useCommunityLanguage } from './CommunityLanguage';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function CommunityLocationMap({ coords, onChange }: Props) {
+  const { t } = useCommunityLanguage();
   const webView = useRef<WebView>(null);
   const [error, setError] = useState('');
   // Keep the document stable while the user moves the pin.
@@ -64,7 +66,7 @@ export function CommunityLocationMap({ coords, onChange }: Props) {
   }, [coords]);
 
   if (!APP_CONFIG.mapboxAccessToken) {
-    return <View style={styles.notice}><Text>Add your Mapbox token to .env.local, then restart Expo to load the map.</Text></View>;
+    return <View style={styles.notice}><Text>{t("Add your Mapbox token to .env.local, then restart Expo to load the map.")}</Text></View>;
   }
 
   return (
@@ -91,7 +93,7 @@ export function CommunityLocationMap({ coords, onChange }: Props) {
           }
         }}
       />
-      {!!error && <View style={styles.error}><Text style={styles.errorText}>{error}</Text></View>}
+      {!!error && <View style={styles.error}><Text style={styles.errorText}>{t(error)}</Text></View>}
     </View>
   );
 }

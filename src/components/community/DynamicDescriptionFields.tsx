@@ -1,3 +1,4 @@
+import { localizeCommunityDescription, useCommunityLanguage } from './CommunityLanguage';
 import React, { useEffect, useState } from 'react';
 import {
   Pressable,
@@ -173,6 +174,7 @@ export function DynamicDescriptionFields({
   kind,
   onDescriptionChange,
 }: DynamicDescriptionFieldsProps) {
+  const { t } = useCommunityLanguage();
   const [data, setData] = useState<DynamicIncidentData>(initialDynamicData);
 
   // Sync compiled description whenever data or kind changes
@@ -197,7 +199,7 @@ export function DynamicDescriptionFields({
   return (
     <View style={styles.container}>
       <Text style={styles.mainLabel}>
-        Incident Details & Description <Text style={styles.required}>*</Text>
+        {t("Incident Details & Description")}{' '}<Text style={styles.required}>*</Text>
       </Text>
 
       {/* CROP RAIDING FIELDS */}
@@ -206,7 +208,7 @@ export function DynamicDescriptionFields({
           {/* What was affected */}
           <View style={styles.fieldBlock}>
             <Text style={styles.subLabel}>
-              What was affected? <Text style={styles.required}>*</Text>
+              {t("What was affected?")}{' '}<Text style={styles.required}>*</Text>
             </Text>
             <View style={styles.chipsRow}>
               {['Paddy', 'Vegetable field', 'Coconut', 'Other'].map((crop) => {
@@ -220,9 +222,9 @@ export function DynamicDescriptionFields({
                     accessibilityState={{ checked: selected }}
                   >
                     <Ionicons
-                      name={selected ? 'checkbox' : 'square-outline'}
+                      name={selected ? "checkbox" : "square-outline"}
                       size={16}
-                      color={selected ? '#FFFFFF' : '#166534'}
+                      color={selected ? "#FFFFFF" : '#166534'}
                     />
                     <Text
                       style={[
@@ -230,7 +232,7 @@ export function DynamicDescriptionFields({
                         selected && styles.chipTextSelected,
                       ]}
                     >
-                      {crop}
+                      {t(crop)}
                     </Text>
                   </Pressable>
                 );
@@ -239,7 +241,7 @@ export function DynamicDescriptionFields({
             {data.cropsAffected.includes('Other') && (
               <TextInput
                 style={styles.customTextInput}
-                placeholder="Specify other crop (e.g. Banana, Sugarcane)..."
+                placeholder={t("Specify other crop (e.g. Banana, Sugarcane)...")}
                 placeholderTextColor="#9CA3AF"
                 value={data.customCrop}
                 onChangeText={(text) =>
@@ -252,7 +254,7 @@ export function DynamicDescriptionFields({
           {/* Approximately damage */}
           <View style={styles.fieldBlock}>
             <Text style={styles.subLabel}>
-              Approximate damage: <Text style={styles.required}>*</Text>
+              {t("Approximate damage:")}{' '}<Text style={styles.required}>*</Text>
             </Text>
             <View style={styles.chipsRow}>
               {['Small', 'Moderate', 'Severe', 'Not sure'].map((lvl) => {
@@ -273,11 +275,11 @@ export function DynamicDescriptionFields({
                     <Ionicons
                       name={
                         selected
-                          ? 'radio-button-on'
-                          : 'radio-button-off-outline'
+                          ? "radio-button-on"
+                          : "radio-button-off-outline"
                       }
                       size={16}
-                      color={selected ? '#FFFFFF' : '#166534'}
+                      color={selected ? "#FFFFFF" : '#166534'}
                     />
                     <Text
                       style={[
@@ -285,7 +287,7 @@ export function DynamicDescriptionFields({
                         selected && styles.chipTextSelected,
                       ]}
                     >
-                      {lvl}
+                      {t(lvl)}
                     </Text>
                   </Pressable>
                 );
@@ -299,7 +301,7 @@ export function DynamicDescriptionFields({
       {kind === 'elephant_sighting' && (
         <View style={styles.groupCard}>
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Elephant Herd Size / Count:</Text>
+            <Text style={styles.subLabel}>{t("Elephant Herd Size / Count:")}</Text>
             <View style={styles.chipsRow}>
               {['Single Bull', 'Mother & Calf', 'Small Group (2-5)', 'Large Herd (6+)'].map(
                 (opt) => {
@@ -315,7 +317,7 @@ export function DynamicDescriptionFields({
                       <Text
                         style={[styles.chipText, sel && styles.chipTextSelected]}
                       >
-                        {opt}
+                        {t(opt)}
                       </Text>
                     </Pressable>
                   );
@@ -325,7 +327,7 @@ export function DynamicDescriptionFields({
           </View>
 
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Observed Behavior:</Text>
+            <Text style={styles.subLabel}>{t("Observed Behavior:")}</Text>
             <View style={styles.chipsRow}>
               {[
                 'Grazing peacefully',
@@ -346,7 +348,7 @@ export function DynamicDescriptionFields({
                     <Text
                       style={[styles.chipText, sel && styles.chipTextSelected]}
                     >
-                      {opt}
+                      {t(opt)}
                     </Text>
                   </Pressable>
                 );
@@ -355,7 +357,7 @@ export function DynamicDescriptionFields({
           </View>
 
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Direction of Movement:</Text>
+            <Text style={styles.subLabel}>{t("Direction of Movement:")}</Text>
             <View style={styles.chipsRow}>
               {[
                 'Towards village',
@@ -375,7 +377,7 @@ export function DynamicDescriptionFields({
                     <Text
                       style={[styles.chipText, sel && styles.chipTextSelected]}
                     >
-                      {opt}
+                      {t(opt)}
                     </Text>
                   </Pressable>
                 );
@@ -389,7 +391,7 @@ export function DynamicDescriptionFields({
       {kind === 'livestock_attack' && (
         <View style={styles.groupCard}>
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Livestock Affected:</Text>
+            <Text style={styles.subLabel}>{t("Livestock Affected:")}</Text>
             <View style={styles.chipsRow}>
               {['Cattle / Cows', 'Goats / Sheep', 'Poultry', 'Other'].map(
                 (opt) => {
@@ -405,7 +407,7 @@ export function DynamicDescriptionFields({
                       <Text
                         style={[styles.chipText, sel && styles.chipTextSelected]}
                       >
-                        {opt}
+                        {t(opt)}
                       </Text>
                     </Pressable>
                   );
@@ -415,7 +417,7 @@ export function DynamicDescriptionFields({
             {data.livestockType === 'Other' && (
               <TextInput
                 style={styles.customTextInput}
-                placeholder="Specify livestock..."
+                placeholder={t("Specify livestock...")}
                 placeholderTextColor="#9CA3AF"
                 value={data.customLivestock}
                 onChangeText={(text) =>
@@ -426,7 +428,7 @@ export function DynamicDescriptionFields({
           </View>
 
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Suspected Predator:</Text>
+            <Text style={styles.subLabel}>{t("Suspected Predator:")}</Text>
             <View style={styles.chipsRow}>
               {['Leopard', 'Elephant', 'Crocodile', 'Wild Boar', 'Not sure'].map(
                 (opt) => {
@@ -442,7 +444,7 @@ export function DynamicDescriptionFields({
                       <Text
                         style={[styles.chipText, sel && styles.chipTextSelected]}
                       >
-                        {opt}
+                        {t(opt)}
                       </Text>
                     </Pressable>
                   );
@@ -452,7 +454,7 @@ export function DynamicDescriptionFields({
           </View>
 
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Outcome / Condition:</Text>
+            <Text style={styles.subLabel}>{t("Outcome / Condition:")}</Text>
             <View style={styles.chipsRow}>
               {['Injured', 'Killed', 'Chased away / Safe'].map((opt) => {
                 const sel = data.livestockOutcome === opt;
@@ -467,7 +469,7 @@ export function DynamicDescriptionFields({
                     <Text
                       style={[styles.chipText, sel && styles.chipTextSelected]}
                     >
-                      {opt}
+                      {t(opt)}
                     </Text>
                   </Pressable>
                 );
@@ -481,7 +483,7 @@ export function DynamicDescriptionFields({
       {kind === 'property_damage' && (
         <View style={styles.groupCard}>
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Property Affected:</Text>
+            <Text style={styles.subLabel}>{t("Property Affected:")}</Text>
             <View style={styles.chipsRow}>
               {[
                 'House / Dwelling',
@@ -503,7 +505,7 @@ export function DynamicDescriptionFields({
                     <Text
                       style={[styles.chipText, sel && styles.chipTextSelected]}
                     >
-                      {opt}
+                      {t(opt)}
                     </Text>
                   </Pressable>
                 );
@@ -512,7 +514,7 @@ export function DynamicDescriptionFields({
             {data.propertyType === 'Other' && (
               <TextInput
                 style={styles.customTextInput}
-                placeholder="Specify property..."
+                placeholder={t("Specify property...")}
                 placeholderTextColor="#9CA3AF"
                 value={data.customProperty}
                 onChangeText={(text) =>
@@ -523,7 +525,7 @@ export function DynamicDescriptionFields({
           </View>
 
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Damage Severity:</Text>
+            <Text style={styles.subLabel}>{t("Damage Severity:")}</Text>
             <View style={styles.chipsRow}>
               {['Small / Minor', 'Moderate', 'Severe / Destroyed'].map((opt) => {
                 const sel = data.propertyDamageLevel === opt;
@@ -538,7 +540,7 @@ export function DynamicDescriptionFields({
                     <Text
                       style={[styles.chipText, sel && styles.chipTextSelected]}
                     >
-                      {opt}
+                      {t(opt)}
                     </Text>
                   </Pressable>
                 );
@@ -547,7 +549,7 @@ export function DynamicDescriptionFields({
           </View>
 
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Wildlife Involved:</Text>
+            <Text style={styles.subLabel}>{t("Wildlife Involved:")}</Text>
             <View style={styles.chipsRow}>
               {['Elephant', 'Wild Boar', 'Monkey / Langur', 'Other'].map(
                 (opt) => {
@@ -563,7 +565,7 @@ export function DynamicDescriptionFields({
                       <Text
                         style={[styles.chipText, sel && styles.chipTextSelected]}
                       >
-                        {opt}
+                        {t(opt)}
                       </Text>
                     </Pressable>
                   );
@@ -578,7 +580,7 @@ export function DynamicDescriptionFields({
       {kind === 'human_injury' && (
         <View style={styles.groupCard}>
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Number of Persons Injured:</Text>
+            <Text style={styles.subLabel}>{t("Number of Persons Injured:")}</Text>
             <View style={styles.chipsRow}>
               {['1 person', '2 people', '3 or more people'].map((opt) => {
                 const sel = data.injuryCount === opt;
@@ -593,7 +595,7 @@ export function DynamicDescriptionFields({
                     <Text
                       style={[styles.chipText, sel && styles.chipTextSelected]}
                     >
-                      {opt}
+                      {t(opt)}
                     </Text>
                   </Pressable>
                 );
@@ -602,7 +604,7 @@ export function DynamicDescriptionFields({
           </View>
 
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Injury Severity:</Text>
+            <Text style={styles.subLabel}>{t("Injury Severity:")}</Text>
             <View style={styles.chipsRow}>
               {[
                 'Minor cuts / Bruises',
@@ -621,7 +623,7 @@ export function DynamicDescriptionFields({
                     <Text
                       style={[styles.chipText, sel && styles.chipTextSelected]}
                     >
-                      {opt}
+                      {t(opt)}
                     </Text>
                   </Pressable>
                 );
@@ -630,7 +632,7 @@ export function DynamicDescriptionFields({
           </View>
 
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Medical Assistance Status:</Text>
+            <Text style={styles.subLabel}>{t("Medical Assistance Status:")}</Text>
             <View style={styles.chipsRow}>
               {[
                 'First aid received',
@@ -652,7 +654,7 @@ export function DynamicDescriptionFields({
                     <Text
                       style={[styles.chipText, sel && styles.chipTextSelected]}
                     >
-                      {opt}
+                      {t(opt)}
                     </Text>
                   </Pressable>
                 );
@@ -661,7 +663,7 @@ export function DynamicDescriptionFields({
           </View>
 
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Wildlife Involved:</Text>
+            <Text style={styles.subLabel}>{t("Wildlife Involved:")}</Text>
             <View style={styles.chipsRow}>
               {['Elephant', 'Leopard', 'Snake', 'Wild Boar', 'Other'].map(
                 (opt) => {
@@ -677,7 +679,7 @@ export function DynamicDescriptionFields({
                       <Text
                         style={[styles.chipText, sel && styles.chipTextSelected]}
                       >
-                        {opt}
+                        {t(opt)}
                       </Text>
                     </Pressable>
                   );
@@ -692,7 +694,7 @@ export function DynamicDescriptionFields({
       {kind === 'other_wildlife_conflict' && (
         <View style={styles.groupCard}>
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Nature of Conflict:</Text>
+            <Text style={styles.subLabel}>{t("Nature of Conflict:")}</Text>
             <View style={styles.chipsRow}>
               {[
                 'Animal trapped / Snared',
@@ -713,7 +715,7 @@ export function DynamicDescriptionFields({
                     <Text
                       style={[styles.chipText, sel && styles.chipTextSelected]}
                     >
-                      {opt}
+                      {t(opt)}
                     </Text>
                   </Pressable>
                 );
@@ -722,7 +724,7 @@ export function DynamicDescriptionFields({
             {data.otherNature === 'Other' && (
               <TextInput
                 style={styles.customTextInput}
-                placeholder="Specify incident nature..."
+                placeholder={t("Specify incident nature...")}
                 placeholderTextColor="#9CA3AF"
                 value={data.customOtherNature}
                 onChangeText={(text) =>
@@ -733,7 +735,7 @@ export function DynamicDescriptionFields({
           </View>
 
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Wildlife Involved:</Text>
+            <Text style={styles.subLabel}>{t("Wildlife Involved:")}</Text>
             <View style={styles.chipsRow}>
               {['Elephant', 'Leopard', 'Deer / Sambhur', 'Crocodile', 'Other'].map(
                 (opt) => {
@@ -749,7 +751,7 @@ export function DynamicDescriptionFields({
                       <Text
                         style={[styles.chipText, sel && styles.chipTextSelected]}
                       >
-                        {opt}
+                        {t(opt)}
                       </Text>
                     </Pressable>
                   );
@@ -759,7 +761,7 @@ export function DynamicDescriptionFields({
           </View>
 
           <View style={styles.fieldBlock}>
-            <Text style={styles.subLabel}>Urgency Level:</Text>
+            <Text style={styles.subLabel}>{t("Urgency Level:")}</Text>
             <View style={styles.chipsRow}>
               {[
                 'Low (Monitor)',
@@ -778,7 +780,7 @@ export function DynamicDescriptionFields({
                     <Text
                       style={[styles.chipText, sel && styles.chipTextSelected]}
                     >
-                      {opt}
+                      {t(opt)}
                     </Text>
                   </Pressable>
                 );
@@ -791,19 +793,19 @@ export function DynamicDescriptionFields({
       {/* Freeform Notes Input */}
       <View style={styles.notesBlock}>
         <Text style={styles.subLabel}>
-          Additional details & notes: <Text style={styles.optional}>(optional)</Text>
+          {t("Additional details & notes:")}{' '}<Text style={styles.optional}>{t("(optional)")}</Text>
         </Text>
         <TextInput
           style={styles.notesInput}
           multiline
           numberOfLines={3}
-          placeholder="Any extra details, animal movements, warnings, or specific damage..."
+          placeholder={t("Any extra details, animal movements, warnings, or specific damage...")}
           placeholderTextColor="#9CA3AF"
           value={data.notes}
           onChangeText={(text) =>
             setData((prev) => ({ ...prev, notes: text }))
           }
-          accessibilityLabel="Additional details and notes"
+          accessibilityLabel={t("Additional details and notes")}
         />
       </View>
 
@@ -812,9 +814,9 @@ export function DynamicDescriptionFields({
         <View style={styles.previewCard}>
           <View style={styles.previewHeader}>
             <Ionicons name="document-text-outline" size={16} color="#166534" />
-            <Text style={styles.previewTitle}>Formatted Description Summary:</Text>
+            <Text style={styles.previewTitle}>{t("Formatted Description Summary:")}</Text>
           </View>
-          <Text style={styles.previewText}>{compiledPreview}</Text>
+          <Text style={styles.previewText}>{localizeCommunityDescription(compiledPreview, t)}</Text>
         </View>
       )}
     </View>
