@@ -1,3 +1,4 @@
+import { CommunityLanguageProvider, CommunityLanguageSelector, localizeCommunityDescription, useCommunityLanguage } from '../components/community/CommunityLanguage';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { Stack } from 'expo-router';
 import { useCameraPermission } from '../hooks/useCameraPermission';
 import { communityStyles as s } from '../components/communityStyles';
 import {
@@ -39,6 +41,11 @@ import { DateTimePicker } from '../components/community/DateTimePickerModal';
 import { DynamicDescriptionFields } from '../components/community/DynamicDescriptionFields';
 
 export default function CommunityReportScreen() {
+  return <CommunityLanguageProvider><CommunityReportForm /></CommunityLanguageProvider>;
+}
+
+function CommunityReportForm() {
+  const { t, translateError } = useCommunityLanguage();
   const scrollRef = useRef<ScrollView>(null);
   const [successVisible, setSuccessVisible] = useState(false);
   const closeSuccess = () => {
@@ -388,36 +395,35 @@ export default function CommunityReportScreen() {
 
   return (
     <>
+    <Stack.Screen options={{ title: t('Community Reporting') }} />
     <ScrollView
       ref={scrollRef}
       style={s.screen}
       contentContainerStyle={s.content}
       keyboardShouldPersistTaps="handled"
     >
+      <CommunityLanguageSelector />
       {!receipt && <>
       <View style={{ gap: 4 }}>
-        <Text style={s.heading}>Community Reporting</Text>
+        <Text style={s.heading}>{t("Community Reporting")}</Text>
         <Text style={s.text}>
-          Report wildlife sightings, damage or injuries near the park boundary. A photo and GPS
-          are not required.
-        </Text>
+          {t("Report wildlife sightings, damage or injuries near the park boundary. A photo and GPS are not required.")}{' '}</Text>
       </View>
 
       <View style={urgentStyles.card}>
         <View style={{ flex: 1, gap: 4 }}>
-          <Text style={urgentStyles.title}>🚨 Immediate Wildlife Alert</Text>
+          <Text style={urgentStyles.title}>{t("🚨 Immediate Wildlife Alert")}</Text>
           <Text style={urgentStyles.text}>
-            For urgent situations such as an elephant moving toward a village.
-          </Text>
+            {t("For urgent situations such as an elephant moving toward a village.")}{' '}</Text>
         </View>
         {!urgentOpen && (
           <Pressable
             style={urgentStyles.button}
             onPress={openUrgentReport}
             accessibilityRole="button"
-            accessibilityLabel="Open immediate wildlife alert"
+            accessibilityLabel={t("Open immediate wildlife alert")}
           >
-            <Text style={urgentStyles.buttonText}>Send urgent alert</Text>
+            <Text style={urgentStyles.buttonText}>{t("Send urgent alert")}</Text>
           </Pressable>
         )}
       </View>
@@ -425,13 +431,13 @@ export default function CommunityReportScreen() {
       {urgentOpen && (
         <View style={urgentStyles.panel}>
           <View style={urgentStyles.panelHeader}>
-            <Text style={s.title}>Quick report</Text>
-            <Pressable onPress={() => setUrgentOpen(false)} accessibilityLabel="Close quick report">
+            <Text style={s.title}>{t("Quick report")}</Text>
+            <Pressable onPress={() => setUrgentOpen(false)} accessibilityLabel={t("Close quick report")}>
               <Ionicons name="close-circle-outline" size={26} color="#991B1B" />
             </Pressable>
           </View>
 
-          <Text style={s.label}>Animal</Text>
+          <Text style={s.label}>{t("Animal")}</Text>
           <View style={s.row}>
             {['Elephant', 'Leopard', 'Wild boar', 'Bear', 'Other'].map((animal) => {
               const selected = urgentAnimal === animal;
@@ -443,7 +449,7 @@ export default function CommunityReportScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                 >
-                  <Text style={selected ? urgentStyles.selectedChoiceText : s.link}>{animal}</Text>
+                  <Text style={selected ? urgentStyles.selectedChoiceText : s.link}>{t(animal)}</Text>
                 </Pressable>
               );
             })}
@@ -453,13 +459,13 @@ export default function CommunityReportScreen() {
               style={s.input}
               value={urgentOtherAnimal}
               onChangeText={setUrgentOtherAnimal}
-              placeholder="Enter animal"
+              placeholder={t("Enter animal")}
               placeholderTextColor="#9CA3AF"
-              accessibilityLabel="Other animal"
+              accessibilityLabel={t("Other animal")}
             />
           )}
 
-          <Text style={s.label}>Direction</Text>
+          <Text style={s.label}>{t("Direction")}</Text>
           <View style={s.row}>
             {['Toward village', 'Away from village', 'Crossing road', 'Unknown'].map((direction) => {
               const selected = urgentDirection === direction;
@@ -471,7 +477,7 @@ export default function CommunityReportScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                 >
-                  <Text style={selected ? urgentStyles.selectedChoiceText : s.link}>{direction}</Text>
+                  <Text style={selected ? urgentStyles.selectedChoiceText : s.link}>{t(direction)}</Text>
                 </Pressable>
               );
             })}
@@ -481,20 +487,20 @@ export default function CommunityReportScreen() {
             <Ionicons name="navigate" size={20} color="#991B1B" />
             <Text style={urgentStyles.text}>
               {urgentLocationBusy
-                ? 'Getting your current GPS location…'
+                ? t("Getting your current GPS location…")
                 : urgentCoords
-                  ? `GPS ready: ${urgentCoords.latitude.toFixed(5)}, ${urgentCoords.longitude.toFixed(5)}`
-                  : 'GPS location is required'}
+                  ? `${t("GPS ready:")} ${urgentCoords.latitude.toFixed(5)}, ${urgentCoords.longitude.toFixed(5)}`
+                  : t("GPS location is required")}
             </Text>
             <Pressable
               onPress={() => void captureUrgentLocation()}
               disabled={urgentLocationBusy}
-              accessibilityLabel="Refresh GPS location"
+              accessibilityLabel={t("Refresh GPS location")}
             >
               <Ionicons name="refresh" size={20} color="#991B1B" />
             </Pressable>
           </View>
-          <Text style={s.text}>Time: {urgentOccurredAt}</Text>
+          <Text style={s.text}>{t("Time:")}{' '}{urgentOccurredAt}</Text>
 
           <Pressable
             style={[urgentStyles.submit, (urgentBusy || urgentLocationBusy) && s.disabled]}
@@ -505,7 +511,7 @@ export default function CommunityReportScreen() {
             {urgentBusy ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={urgentStyles.submitText}>🚨 Send Alert Now</Text>
+              <Text style={urgentStyles.submitText}>{t("🚨 Send Alert Now")}</Text>
             )}
           </Pressable>
         </View>
@@ -524,7 +530,7 @@ export default function CommunityReportScreen() {
               accessibilityState={{ selected: isSelected }}
             >
               <Text style={isSelected ? s.buttonText : s.link}>
-                {COMMUNITY_REPORT_TYPES[value].label}
+                {t(COMMUNITY_REPORT_TYPES[value].label)}
               </Text>
             </Pressable>
           );
@@ -565,12 +571,12 @@ export default function CommunityReportScreen() {
 
       {/* Contact phone (optional) */}
       <View style={{ gap: 4 }}>
-        <Text style={s.label}>Contact phone (optional)</Text>
+        <Text style={s.label}>{t("Contact phone (optional)")}</Text>
         <TextInput
           style={s.input}
-          accessibilityLabel="Contact phone"
+          accessibilityLabel={t("Contact phone")}
           keyboardType="phone-pad"
-          placeholder="e.g. 077 123 4567"
+          placeholder={t("e.g. 077 123 4567")}
           placeholderTextColor="#9CA3AF"
           value={contactPhone}
           onChangeText={setPhone}
@@ -579,7 +585,7 @@ export default function CommunityReportScreen() {
 
       {/* Photos */}
       <View style={{ gap: 8 }}>
-        <Text style={s.label}>Evidence Photos (optional)</Text>
+        <Text style={s.label}>{t("Evidence Photos (optional)")}</Text>
         <View style={s.row}>
           <Pressable
             disabled={busy}
@@ -587,7 +593,7 @@ export default function CommunityReportScreen() {
             onPress={() => selectPhoto(true)}
           >
             <Ionicons name="camera-outline" size={18} color="#166534" />
-            <Text style={s.link}>Take Photo</Text>
+            <Text style={s.link}>{t("Take Photo")}</Text>
           </Pressable>
           <Pressable
             disabled={busy}
@@ -595,7 +601,7 @@ export default function CommunityReportScreen() {
             onPress={() => selectPhoto(false)}
           >
             <Ionicons name="images-outline" size={18} color="#166534" />
-            <Text style={s.link}>Choose from Gallery</Text>
+            <Text style={s.link}>{t("Choose from Gallery")}</Text>
           </Pressable>
         </View>
       </View>
@@ -604,7 +610,7 @@ export default function CommunityReportScreen() {
         <View key={`${uri}-${index}`} style={{ gap: 4 }}>
           <Image source={{ uri }} style={s.photo} resizeMode="contain" />
           <Pressable onPress={() => setPhotos((items) => items.filter((_, i) => i !== index))}>
-            <Text style={[s.link, { color: '#DC2626' }]}>Remove photo {index + 1}</Text>
+            <Text style={[s.link, { color: '#DC2626' }]}>{t("Remove photo")}{' '}{index + 1}</Text>
           </Pressable>
         </View>
       ))}
@@ -614,41 +620,40 @@ export default function CommunityReportScreen() {
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Ionicons name="checkmark-done-circle" size={22} color="#166534" />
-            <Text style={s.title}>Confirm your report</Text>
+            <Text style={s.title}>{t("Confirm your report")}</Text>
           </View>
           <View style={{ gap: 6, backgroundColor: '#F0FDF4', padding: 12, borderRadius: 8 }}>
             <Text style={[s.text, { fontWeight: '700', color: '#166534' }]}>
-              {COMMUNITY_REPORT_TYPES[kind].label}
+              {t(COMMUNITY_REPORT_TYPES[kind].label)}
             </Text>
             <Text style={s.text}>
-              <Text style={{ fontWeight: '600' }}>Location: </Text>
-              {effective.village || 'No village'} · {effective.boundarySection || 'No boundary'}
+              <Text style={{ fontWeight: '600' }}>{t("Location:")}{' '}</Text>
+              {t(effective.village) || t("No village")} · {t(effective.boundarySection) || t("No boundary")}
             </Text>
             <Text style={s.text}>
-              <Text style={{ fontWeight: '600' }}>Landmark / GPS: </Text>
-              {effective.landmark || 'None'}
+              <Text style={{ fontWeight: '600' }}>{t("Landmark / GPS:")}{' '}</Text>
+              {effective.landmark || t("None")}
             </Text>
             <Text style={s.text}>
-              <Text style={{ fontWeight: '600' }}>Time: </Text>
+              <Text style={{ fontWeight: '600' }}>{t("Time:")}{' '}</Text>
               {occurredAt}
             </Text>
             <Text style={s.text}>
-              <Text style={{ fontWeight: '600' }}>Description: </Text>
-              {effective.description || 'None'}
+              <Text style={{ fontWeight: '600' }}>{t("Description:")}{' '}</Text>
+              {localizeCommunityDescription(effective.description, t) || t("None")}
             </Text>
             {!!contactPhone.trim() && (
               <Text style={s.text}>
-                <Text style={{ fontWeight: '600' }}>Contact: </Text>
+                <Text style={{ fontWeight: '600' }}>{t("Contact:")}{' '}</Text>
                 {contactPhone.trim()}
               </Text>
             )}
             <Text style={[s.text, { fontStyle: 'italic', color: '#6B7280' }]}>
-              {photos.length} photo(s) attached
-            </Text>
+              {photos.length} {t("photo(s) attached")}{' '}</Text>
           </View>
 
           <Pressable disabled={busy} style={s.button} onPress={submit}>
-            <Text style={s.buttonText}>{busy ? 'Saving…' : 'Confirm & Submit Report'}</Text>
+            <Text style={s.buttonText}>{busy ? t("Saving…") : t("Confirm & Submit Report")}</Text>
           </Pressable>
         </View>
       )}
@@ -659,7 +664,7 @@ export default function CommunityReportScreen() {
         disabled={busy}
         onPress={handleReview}
       >
-        <Text style={s.buttonText}>Review Report</Text>
+        <Text style={s.buttonText}>{t("Review Report")}</Text>
       </Pressable>
 
       {!!error && (
@@ -674,16 +679,16 @@ export default function CommunityReportScreen() {
           }}
         >
           <Ionicons name="alert-circle" size={18} color="#B91C1C" />
-          <Text style={s.error}>{error}</Text>
+          <Text style={s.error}>{translateError(error)}</Text>
         </View>
       )}
 
       </>}
       {!!receipt && <View style={{ gap: 12 }}>
         <Pressable style={[s.outline, { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8 }]} onPress={startAnotherReport} accessibilityRole="button">
-          <Ionicons name="add-circle-outline" size={19} color="#245747" /><Text style={s.link}>Submit another report</Text>
+          <Ionicons name="add-circle-outline" size={19} color="#245747" /><Text style={s.link}>{t("Submit another report")}</Text>
         </Pressable>
-        <Text style={s.heading}>Your report summary</Text>
+        <Text style={s.heading}>{t("Your report summary")}</Text>
       </View>}
       {!!receipt && (
         <View
@@ -697,9 +702,9 @@ export default function CommunityReportScreen() {
           }}
         >
           <Ionicons
-            name={submittedSynced ? 'cloud-done-outline' : 'cloud-offline-outline'}
+            name={submittedSynced ? "cloud-done-outline" : "cloud-offline-outline"}
             size={18}
-            color={submittedSynced ? '#166534' : '#B45309'}
+            color={submittedSynced ? '#166534' : "#B45309"}
           />
           <Text
             style={[
@@ -708,8 +713,8 @@ export default function CommunityReportScreen() {
             ]}
           >
             {submittedSynced
-              ? `Report submitted & synced with Operations. Reference: ${receipt}`
-              : `Saved on this device · Marked "Waiting to sync". Reference: ${receipt}`}
+              ? `${t("Report submitted & synced with Operations.")} ${t("Reference:")} ${receipt}`
+              : `${t("Saved on this device.")} ${t("Waiting to sync")}. ${t("Reference:")} ${receipt}`}
           </Text>
         </View>
       )}
@@ -719,7 +724,7 @@ export default function CommunityReportScreen() {
         {/* Section Header with live status and actions */}
         <View style={statusStyles.queueHeader}>
           <View>
-            <Text style={s.title}>{receipt ? 'Submitted report' : 'Reports from this device'}</Text>
+            <Text style={s.title}>{receipt ? t("Submitted report") : t("Reports from this device")}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
               <View
                 style={[
@@ -728,7 +733,7 @@ export default function CommunityReportScreen() {
                 ]}
               />
               <Text style={statusStyles.networkStatusText}>
-                {isOnline ? 'Online · Live Sync Active' : 'Offline · Reports save locally'}
+                {isOnline ? t("Online · Live Sync Active") : t("Offline · Reports save locally")}
               </Text>
             </View>
           </View>
@@ -748,8 +753,8 @@ export default function CommunityReportScreen() {
                 )}
                 <Text style={statusStyles.globalSyncText}>
                   {syncingId === 'all'
-                    ? 'Syncing…'
-                    : `Sync now (${pendingReports.length} pending)`}
+                    ? t("Syncing…")
+                    : `${t("Sync now")} (${pendingReports.length})`}
                 </Text>
               </Pressable>
             )}
@@ -767,7 +772,7 @@ export default function CommunityReportScreen() {
                   <Ionicons name="refresh" size={16} color="#FFFFFF" />
                 )}
                 <Text style={statusStyles.globalRetryText}>
-                  {syncingId === 'all' ? 'Retrying…' : 'Retry sync'}
+                  {syncingId === 'all' ? t("Retrying…") : t("Retry sync")}
                 </Text>
               </Pressable>
             )}
@@ -782,12 +787,12 @@ export default function CommunityReportScreen() {
               }}
             >
               <Ionicons
-                name={isSimulatedOfflineState ? 'wifi' : 'airplane'}
+                name={isSimulatedOfflineState ? "wifi" : "airplane"}
                 size={14}
                 color="#374151"
               />
               <Text style={statusStyles.offlineToggleText}>
-                {isSimulatedOfflineState ? 'Restore Internet' : 'Simulate Offline'}
+                {isSimulatedOfflineState ? t("Restore Internet") : t("Simulate Offline")}
               </Text>
             </Pressable>
           </View>
@@ -809,10 +814,10 @@ export default function CommunityReportScreen() {
               >
                 <View style={{ flex: 1, minWidth: 200 }}>
                   <Text style={s.title}>
-                    {COMMUNITY_REPORT_TYPES[entry.input.kind]?.label || entry.input.kind}
+                    {t(COMMUNITY_REPORT_TYPES[entry.input.kind]?.label || entry.input.kind)}
                   </Text>
                   <Text style={s.text}>
-                    {entry.input.village} · {entry.input.boundarySection}
+                    {t(entry.input.village)} · {t(entry.input.boundarySection)}
                   </Text>
                 </View>
 
@@ -820,31 +825,31 @@ export default function CommunityReportScreen() {
                 {status === 'synced' && (
                   <View style={statusStyles.badgeSynced}>
                     <Ionicons name="cloud-done" size={15} color="#166534" />
-                    <Text style={statusStyles.badgeSyncedText}>Synced with Operations</Text>
+                    <Text style={statusStyles.badgeSyncedText}>{t("Synced with Operations")}</Text>
                   </View>
                 )}
                 {status === 'waiting' && (
                   <View style={statusStyles.badgeWaiting}>
                     <Ionicons name="time-outline" size={15} color="#B45309" />
-                    <Text style={statusStyles.badgeWaitingText}>Waiting to sync</Text>
+                    <Text style={statusStyles.badgeWaitingText}>{t("Waiting to sync")}</Text>
                   </View>
                 )}
                 {status === 'failed' && (
                   <View style={statusStyles.badgeFailed}>
                     <Ionicons name="alert-circle" size={15} color="#B91C1C" />
-                    <Text style={statusStyles.badgeFailedText}>Sync failed</Text>
+                    <Text style={statusStyles.badgeFailedText}>{t("Sync failed")}</Text>
                   </View>
                 )}
                 {status === 'syncing' && (
                   <View style={statusStyles.badgeSyncing}>
                     <ActivityIndicator size="small" color="#1D4ED8" />
-                    <Text style={statusStyles.badgeSyncingText}>Syncing to Operations…</Text>
+                    <Text style={statusStyles.badgeSyncingText}>{t("Syncing to Operations…")}</Text>
                   </View>
                 )}
               </View>
 
               <Text style={[s.text, { fontSize: 13, color: '#4B5563' }]}>
-                {entry.input.description}
+                {localizeCommunityDescription(entry.input.description, t)}
               </Text>
 
               {(entry.uploadedPhotos.length > 0 || entry.localPhotos.length > 0) && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
@@ -856,7 +861,7 @@ export default function CommunityReportScreen() {
                 <View style={statusStyles.errorDetailBox}>
                   <Ionicons name="warning-outline" size={14} color="#B91C1C" />
                   <Text style={statusStyles.errorDetailText}>
-                    {entry.error || 'Connection failed during upload.'}
+                    {translateError(entry.error || "Connection failed during upload.")}
                   </Text>
                 </View>
               )}
@@ -864,7 +869,7 @@ export default function CommunityReportScreen() {
               {/* Footer row with Reference ID and Actions */}
               <View style={statusStyles.cardFooter}>
                 <Text style={[s.text, { fontSize: 12, color: '#9CA3AF' }]}>
-                  Reference: {entry.id}
+                  {t("Reference:")}{' '}{entry.id}
                 </Text>
 
                 <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
@@ -880,7 +885,7 @@ export default function CommunityReportScreen() {
                         <Ionicons name="cloud-upload-outline" size={15} color="#166534" />
                       )}
                       <Text style={statusStyles.syncNowText}>
-                        {syncingId === entry.id ? 'Syncing…' : 'Sync now'}
+                        {syncingId === entry.id ? t("Syncing…") : t("Sync now")}
                       </Text>
                     </Pressable>
                   )}
@@ -897,7 +902,7 @@ export default function CommunityReportScreen() {
                         <Ionicons name="refresh" size={15} color="#B91C1C" />
                       )}
                       <Text style={statusStyles.retrySyncText}>
-                        {syncingId === entry.id ? 'Retrying…' : 'Retry sync'}
+                        {syncingId === entry.id ? t("Retrying…") : t("Retry sync")}
                       </Text>
                     </Pressable>
                   )}
@@ -907,15 +912,15 @@ export default function CommunityReportScreen() {
           );
         })}
 
-        {!queue.length && <Text style={s.text}>No reports saved on this device yet.</Text>}
+        {!queue.length && <Text style={s.text}>{t("No reports saved on this device yet.")}</Text>}
       </View>
     </ScrollView>
     <Modal visible={successVisible} transparent animationType="fade" onRequestClose={closeSuccess}>
       <View style={successStyles.overlay}><View style={successStyles.card}>
         <View style={successStyles.icon}><Ionicons name="checkmark" size={30} color="#245747" /></View>
-        <Text style={successStyles.title}>Report saved successfully</Text>
-        <Text style={successStyles.message}>Thank you for reporting. {isCommunityOnline() ? 'Your report is being synced with Operations.' : 'It will sync when you are back online.'}</Text>
-        <Pressable style={s.button} onPress={closeSuccess} accessibilityRole="button"><Text style={s.buttonText}>Done</Text></Pressable>
+        <Text style={successStyles.title}>{t("Report saved successfully")}</Text>
+        <Text style={successStyles.message}>{t("Thank you for reporting.")}{' '}{isCommunityOnline() ? t("Your report is being synced with Operations.") : t("It will sync when you are back online.")}</Text>
+        <Pressable style={s.button} onPress={closeSuccess} accessibilityRole="button"><Text style={s.buttonText}>{t("Done")}</Text></Pressable>
       </View></View>
     </Modal>
     </>
@@ -1181,10 +1186,11 @@ const urgentStyles = StyleSheet.create({
 });
 
 function ReportSummaryPhoto({ uri, fallback, index }: { uri: string; fallback?: string; index: number }) {
+  const { t } = useCommunityLanguage();
   const [failedUri, setFailedUri] = useState<string>();
   return <Image source={{ uri: failedUri === uri && fallback ? fallback : uri }}
     style={{ width: 150, height: 112, borderRadius: 10, backgroundColor: '#E8EEE6' }}
-    resizeMode="cover" onError={() => setFailedUri(uri)} accessibilityLabel={`Report photo ${index + 1}`} />;
+    resizeMode="cover" onError={() => setFailedUri(uri)} accessibilityLabel={`${t("Report photo")} ${index + 1}`} />;
 }
 const successStyles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(10,30,20,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },

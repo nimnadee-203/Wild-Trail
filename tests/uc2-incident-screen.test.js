@@ -1,5 +1,7 @@
 const env = require('./helpers/screen-environment');
-jest.mock('../src/services/api/incidents', () => ({ createIncident: jest.fn() }));
+jest.mock('../src/services/rangerIncidentQueue', () => ({ saveRangerIncident: jest.fn() }));
+jest.mock('../src/hooks/useRangerIncidentQueue', () => ({ useRangerIncidentQueue: () => ({ queue: [], online: true }) }));
+jest.mock('../src/components/RangerIncidentOfflinePanel', () => ({ RangerIncidentOfflinePanel: () => null }));
 jest.mock('../src/hooks/useCameraPermission', () => ({
   useCameraPermission: () => {
     const React = require('react');
@@ -21,7 +23,7 @@ const React = require('react');
 const { render, fireEvent, act } = require('@testing-library/react-native');
 const { Alert } = require('react-native');
 const picker = require('expo-image-picker');
-const { createIncident } = require('../src/services/api/incidents');
+const { saveRangerIncident: createIncident } = require('../src/services/rangerIncidentQueue');
 const { goBackOrReplace } = require('../src/utils/navigation');
 const Screen = require('../src/app/(ranger)/report-incident').default;
 async function details(type = 'Snare') {
@@ -35,9 +37,34 @@ async function review(screen, { description = 'Tracks near gate', location = tru
   await fireEvent.press(screen.getByText('Review Report'));
 }
 beforeEach(() => {
-  createIncident.mockResolvedValue({ id: 'i' });
+  createIncident.mockResolvedValue({ id: 'i', syncStatus: 'synced' });
   picker.launchCameraAsync.mockResolvedValue('camera:photo');
   picker.launchImageLibraryAsync.mockResolvedValue('gallery:photo');
+});
+
+test('Emergency report skips review and submits critical priority with required details', async () => {
+  env.params.emergency = 'true';
+  const screen = await render(React.createElement(Screen));
+  expect(screen.queryByText('Review Report')).toBeNull();
+  await fireEvent.press(screen.getByText('Send emergency report'));
+  expect(createIncident).not.toHaveBeenCalled();
+  await fireEvent.changeText(screen.getByPlaceholderText(/Describe/), 'Ranger injured near gate');
+  await fireEvent.press(screen.getByText('Send emergency report'));
+  expect(Alert.alert).toHaveBeenLastCalledWith('Location required', expect.any(String));
+  await fireEvent.press(screen.getByLabelText('Use GPS location'));
+  await fireEvent.press(screen.getByText('Send emergency report'));
+  expect(createIncident).toHaveBeenCalledWith(expect.objectContaining({
+    title: 'Emergency incident', severity: 'critical', description: 'Ranger injured near gate',
+    location: { latitude: 0, longitude: 0, accuracy: 5 }, photoUris: [],
+  }));
+  expect(screen.getByText('Report submitted')).toBeTruthy();
+});
+
+test('Emergency button opens quick reporting from the normal form', async () => {
+  const screen = await render(React.createElement(Screen));
+  await fireEvent.press(screen.getByText('Emergency report'));
+  expect(screen.getByText('Send emergency report')).toBeTruthy();
+  expect(screen.queryByText('Select the type of incident')).toBeNull();
 });
 test.each([
   ['Snare', 'snare_detected'],
@@ -92,7 +119,7 @@ test('UC2 custom category requires text and supports editing type from details',
     expect.objectContaining({ category: 'other', title: 'Carcass' }),
   );
 });
-test('UC2 submission disables repeat presses while pending and displays photo warning', async () => {
+test('UC2 submission disables repeat presses while saving and displays sync failure without losing the report', async () => {
   const pending = env.deferred();
   createIncident.mockReturnValue(pending.promise);
   const screen = await details();
@@ -101,11 +128,11 @@ test('UC2 submission disables repeat presses while pending and displays photo wa
   await fireEvent.press(screen.getByText(/Submitting report/));
   expect(createIncident).toHaveBeenCalledTimes(1);
   await act(async () => {
-    pending.resolve({ photoWarning: 'One photo failed' });
+    pending.resolve({ id: 'i', syncStatus: 'failed', error: 'One photo failed' });
     await completion;
   });
-  expect(screen.getByText('Photos incomplete')).toBeTruthy();
-  expect(screen.getByText('One photo failed')).toBeTruthy();
+  expect(screen.getByText('Report saved on this device')).toBeTruthy();
+  expect(screen.getByText(/Sync needs attention: One photo failed/)).toBeTruthy();
   await fireEvent.press(screen.getByLabelText('Go back'));
   expect(goBackOrReplace).toHaveBeenCalledWith('/(ranger)/dashboard');
 });

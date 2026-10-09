@@ -1,5 +1,5 @@
 import { WildTrailBrand } from '../../components/WildTrailBrand';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { getRangerIncidents } from '../../services/api/incidents';
 import { IncidentReport, IncidentStatus, IncidentSeverity } from '../../types/incident';
 import { formatCoordinates } from '../../utils/formatting';
+import { RangerIncidentOfflinePanel } from '../../components/RangerIncidentOfflinePanel';
+import { getRangerIncidentQueue, isRangerIncidentOnline, subscribeRangerIncidentQueue } from '../../services/rangerIncidentQueue';
 
 const STATUS: Record<IncidentStatus, { label: string; color: string; background: string }> = {
   pending: { label: 'Pending', color: '#94611B', background: '#FCF0D9' },
@@ -43,6 +45,7 @@ export default function IncidentReportsScreen() {
     const id = ++requestId.current;
     setLoading(true);
     setError(undefined);
+    if (!isRangerIncidentOnline()) { setLoading(false); return; }
     try {
       const data = await getRangerIncidents();
       if (id === requestId.current) setReports(data);
@@ -52,6 +55,22 @@ export default function IncidentReportsScreen() {
       if (id === requestId.current) setLoading(false);
     }
   }, []);
+  useEffect(() => {
+    let active = true;
+    let wasOnline = isRangerIncidentOnline();
+    let syncedReferences = '';
+    const unsubscribe = subscribeRangerIncidentQueue(() => {
+      void getRangerIncidentQueue().then(entries => {
+        if (!active) return;
+        const online = isRangerIncidentOnline();
+        const references = entries.filter(entry => entry.syncStatus === 'synced').map(entry => entry.id).join(',');
+        if (online && (!wasOnline || references !== syncedReferences)) void load();
+        wasOnline = online;
+        syncedReferences = references;
+      }).catch(() => undefined);
+    });
+    return () => { active = false; unsubscribe(); };
+  }, [load]);
   useFocusEffect(useCallback(() => {
     void load();
     return () => { requestId.current++; };
@@ -100,6 +119,16 @@ export default function IncidentReportsScreen() {
           <Text style={s.eyebrow}>FIELD ACTIVITY</Text>
           <Text style={s.heading}>My incidents</Text>
           <Text style={s.subtitle}>Your observations, reports and response progress.</Text>
+          <RangerIncidentOfflinePanel />
+          <Pressable
+            style={[s.primary, s.emergency]}
+            onPress={() => router.push({ pathname: '/(ranger)/report-incident', params: { emergency: 'true' } })}
+            accessibilityRole="button"
+            accessibilityLabel="Emergency report"
+            accessibilityHint="Open a quick report with Critical priority"
+          >
+            <Ionicons name="warning" size={24} color="#FFFFFF" /><Text style={s.primaryText}>Emergency report</Text><Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+          </Pressable>
           <Pressable style={s.primary} onPress={newReport} accessibilityRole="button">
             <Ionicons name="add-circle-outline" size={21} color="#FFFFFF" /><Text style={s.primaryText}>Report an incident</Text><Ionicons name="arrow-forward" size={18} color="#D0DFD4" />
           </Pressable>
@@ -172,6 +201,7 @@ const s = StyleSheet.create({
   subtitle: { fontSize: 14, lineHeight: 21, color: '#4C6053', marginTop: 7, marginBottom: 20 },
   primary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, backgroundColor: '#245747', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 16, minHeight: 50 },
   primaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', flex: 1 },
+  emergency: { backgroundColor: '#B42332', minHeight: 56, marginBottom: 12 },
   stats: { flexDirection: 'row', borderWidth: 1, borderColor: '#173D2D', borderRadius: 18, backgroundColor: '#173D2D', paddingVertical: 18, marginVertical: 20 },
   stat: { flex: 1, alignItems: 'center', gap: 5 },
   statBorder: { borderLeftWidth: 1, borderColor: '#476451' },

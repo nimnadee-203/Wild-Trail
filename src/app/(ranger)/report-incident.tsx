@@ -15,13 +15,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import Colors from '../../constants/colors';
 import { useCameraPermission } from '../../hooks/useCameraPermission';
 import { LocationLandmarkPicker } from '../../components/community/LocationLandmarkPicker';
 import type { LocationCoords } from '../../components/community/MapPickerModal';
 import { formatCoordinates } from '../../utils/formatting';
-import { createIncident } from '../../services/api/incidents';
+import { QueuedRangerIncident, saveRangerIncident } from '../../services/rangerIncidentQueue';
+import { useRangerIncidentQueue } from '../../hooks/useRangerIncidentQueue';
+import { RangerIncidentOfflinePanel } from '../../components/RangerIncidentOfflinePanel';
 import { IncidentCategory, IncidentSeverity } from '../../types/incident';
 
 type IncidentType = 'Snare' | 'Carcass' | 'Illegal Campsite' | 'Wildlife Sighting' | 'Other';
@@ -55,21 +57,26 @@ const formatDate = () =>
 
 export default function ReportIncidentScreen() {
   const router = useRouter();
+  const { emergency } = useLocalSearchParams<{ emergency?: string }>();
+  const [isEmergency, setIsEmergency] = useState(emergency === 'true');
   const { photos, takePhotoWithCamera, pickImageFromGallery, addPhoto, removePhoto } = useCameraPermission();
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
   const [isChoosingPhoto, setIsChoosingPhoto] = useState(false);
-  const [step, setStep] = useState(1);
-  const [incidentType, setIncidentType] = useState<IncidentType>('Snare');
-  const [customIncidentType, setCustomIncidentType] = useState('');
+  const [step, setStep] = useState(emergency === 'true' ? 2 : 1);
+  const [incidentType, setIncidentType] = useState<IncidentType>(emergency === 'true' ? 'Other' : 'Snare');
+  const [customIncidentType, setCustomIncidentType] = useState(emergency === 'true' ? 'Emergency incident' : '');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<IncidentSeverity>('medium');
+  const [priority, setPriority] = useState<IncidentSeverity>(emergency === 'true' ? 'critical' : 'medium');
   const [dateTime] = useState(formatDate);
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [manualLocation, setManualLocation] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<LocationCoords | null>(null);
   const [locationSource, setLocationSource] = useState<'gps' | 'map' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [photoWarning, setPhotoWarning] = useState<string>();
+  const [savedReport, setSavedReport] = useState<QueuedRangerIncident>();
+  const { queue, online } = useRangerIncidentQueue();
+  const savedEntry = queue.find(entry => entry.id === savedReport?.id) ?? savedReport;
+  const synced = savedEntry?.syncStatus === 'synced';
 
   const coordinateLabel = formatCoordinates(selectedLocation?.latitude, selectedLocation?.longitude);
   const coordinates = manualLocation.trim()
@@ -103,7 +110,9 @@ export default function ReportIncidentScreen() {
       goBackOrReplace('/(ranger)/dashboard');
       return;
     }
-    if (step > 1) {
+    if (isEmergency) {
+      goBackOrReplace('/(ranger)/incident-reports');
+    } else if (step > 1) {
       setStep((current) => current - 1);
     } else {
       goBackOrReplace('/(ranger)/dashboard');
@@ -111,6 +120,7 @@ export default function ReportIncidentScreen() {
   };
 
   const submit = async () => {
+    if (isSubmitting) return;
     if (!description.trim()) {
       Alert.alert('Description required', 'Please add a short description before submitting.');
       return;
@@ -130,9 +140,9 @@ export default function ReportIncidentScreen() {
 
     setIsSubmitting(true);
     try {
-      const result = await createIncident({
+      const result = await saveRangerIncident({
         category: categoryByType[incidentType],
-        severity: priority,
+        severity: isEmergency ? 'critical' : priority,
         title: displayedIncidentType,
         description,
         location: {
@@ -143,7 +153,7 @@ export default function ReportIncidentScreen() {
         },
         photoUris: photos,
       });
-      setPhotoWarning(result.photoWarning);
+      setSavedReport(result);
       setStep(4);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to submit the incident.';
@@ -172,14 +182,33 @@ export default function ReportIncidentScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.progress}>
+          {!isEmergency && step < 3 && (
+            <TouchableOpacity
+              style={styles.emergencyButton}
+              accessibilityRole="button"
+              onPress={() => {
+                setIsEmergency(true);
+                setPriority('critical');
+                if (step === 1) {
+                  setIncidentType('Other');
+                  setCustomIncidentType('Emergency incident');
+                }
+                setStep(2);
+              }}
+            >
+              <Ionicons name="warning" size={24} color="#FFFFFF" />
+              <Text style={styles.primaryButtonText}>Emergency report</Text>
+            </TouchableOpacity>
+          )}
+          <RangerIncidentOfflinePanel />
+          {!isEmergency && <View style={styles.progress}>
             {['Type', 'Details', 'Review', 'Confirmation'].map((label, index) => <View key={label} style={styles.progressStep}>
               <View style={[styles.progressCircle, step >= index + 1 && styles.progressActive]}>
                 {step > index + 1 ? <Ionicons name="checkmark" size={16} color="#FFFFFF" /> : <Text style={[styles.progressNumber, step === index + 1 && styles.progressNumberActive]}>{index + 1}</Text>}
               </View>
               <Text style={[styles.progressLabel, step === index + 1 && styles.progressLabelActive]}>{label}</Text>
             </View>)}
-          </View>
+          </View>}
           {step === 1 && (
             <View>
               <Text style={styles.stepHeading}>Select the type of incident</Text>
@@ -234,8 +263,8 @@ export default function ReportIncidentScreen() {
 
           {step === 2 && (
             <View>
-              <Text style={styles.stepHeading}>Incident details</Text>
-              <Text style={styles.introText}>Add the location, your observations and any supporting photos.</Text>
+              <Text style={styles.stepHeading}>{isEmergency ? 'Emergency report' : 'Incident details'}</Text>
+              <Text style={styles.introText}>{isEmergency ? 'Critical priority. Select your location, add a short description and send immediately.' : 'Add the location, your observations and any supporting photos.'}</Text>
               <LocationLandmarkPicker
                 landmarkText={manualLocation}
                 onChangeLandmarkText={setManualLocation}
@@ -245,6 +274,7 @@ export default function ReportIncidentScreen() {
                 onLocationSourceChange={setLocationSource}
               />
 
+              {!isEmergency && <>
               <Text style={styles.formLabel}>Incident Type</Text>
               <TouchableOpacity
                 style={styles.selectField}
@@ -308,6 +338,7 @@ export default function ReportIncidentScreen() {
                 <Ionicons name="calendar-outline" size={18} color={Colors.light.text} />
               </View>
 
+              </>}
               <Text style={styles.formLabel}>Description · Required</Text>
               <TextInput
                 style={styles.description}
@@ -319,6 +350,17 @@ export default function ReportIncidentScreen() {
                 textAlignVertical="top"
               />
 
+              {isEmergency && <TouchableOpacity
+                style={[styles.emergencyButton, isSubmitting && styles.disabledButton]}
+                onPress={submit}
+                disabled={isSubmitting}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: isSubmitting, busy: isSubmitting }}
+              >
+                <Ionicons name="warning" size={22} color="#FFFFFF" />
+                <Text style={styles.primaryButtonText}>{isSubmitting ? 'Sending emergency report…' : 'Send emergency report'}</Text>
+              </TouchableOpacity>}
+              {!isEmergency && <>
               <Text style={styles.formLabel}>Supporting photos · Optional</Text>
               <TouchableOpacity style={styles.photoButton} onPress={() => choosePhoto('camera')} disabled={isChoosingPhoto} activeOpacity={0.8}>
                 <Ionicons name="camera" size={19} color={Colors.light.primaryDark} />
@@ -357,6 +399,7 @@ export default function ReportIncidentScreen() {
               <TouchableOpacity style={[styles.primaryButton, (isChoosingPhoto || !!pendingPhoto) && styles.disabledButton]} disabled={isChoosingPhoto || !!pendingPhoto} onPress={() => setStep(3)} activeOpacity={0.85}>
                 <Text style={styles.primaryButtonText}>Review Report</Text>
               </TouchableOpacity>
+              </>}
             </View>
           )}
 
@@ -384,8 +427,8 @@ export default function ReportIncidentScreen() {
               <View style={styles.offlineCard}>
                 <Ionicons name="information-circle-outline" size={24} color="#61716A" />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.offlineTitle}>Ready to send</Text>
-                  <Text style={styles.offlineText}>An internet connection is needed to submit this report.</Text>
+                  <Text style={styles.offlineTitle}>{online ? 'Ready to save and sync' : 'Ready to save offline'}</Text>
+                  <Text style={styles.offlineText}>Your report and photos are saved on this device first. They sync automatically when connectivity returns.</Text>
                 </View>
               </View>
             </View>
@@ -393,8 +436,8 @@ export default function ReportIncidentScreen() {
 
           {step === 4 && (
             <View>
-              <Text style={styles.stepHeading}>Report submitted</Text>
-              <Text style={styles.introText}>Your incident has been saved. Review the attachment status below.</Text>
+              <Text style={styles.stepHeading}>{synced ? 'Report submitted' : 'Report saved on this device'}</Text>
+              <Text style={styles.introText}>{synced ? 'Your report and photos have synced with Operations.' : 'Your incident is safely saved locally. Keep the app open or reopen it when connectivity returns to sync.'}</Text>
               <View style={styles.summaryCard}>
                 <SummaryRow label="Patrol ID:" value={patrolId} />
                 <SummaryRow label="Location:" value={coordinates} />
@@ -418,11 +461,12 @@ export default function ReportIncidentScreen() {
                 </View>
                 <View>
                   <Text style={styles.successTitle}>Saved Successfully</Text>
-                  <Text style={styles.successTitle}>{photoWarning ? 'Photos incomplete' : 'Synced'}</Text>
+                  <Text style={styles.successTitle}>{synced ? 'Synced' : savedEntry?.syncStatus === 'syncing' ? 'Syncing…' : 'Waiting to sync'}</Text>
+                  <Text style={styles.successMeta}>Reference: {savedReport?.id}</Text>
                   <Text style={styles.successMeta}>Date &amp; Time: {dateTime}</Text>
                 </View>
               </View>
-              {photoWarning && <Text style={styles.photoWarning}>{photoWarning}</Text>}
+              {savedEntry?.error && <Text style={styles.photoWarning}>Sync needs attention: {savedEntry.error} Your report remains saved on this device.</Text>}
               <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace('/(ranger)/dashboard')}><Text style={styles.primaryButtonText}>Back to Dashboard</Text></TouchableOpacity>
             </View>
           )}
@@ -442,6 +486,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
+  emergencyButton: { minHeight: 56, backgroundColor: '#B42332', borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 20, marginTop: 8 },
   priorityHelp: { fontSize: 13, color: '#53655B', lineHeight: 20, marginBottom: 12 },
   priorityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   priorityOption: { flexGrow: 1, flexBasis: '45%', borderWidth: 2, borderColor: '#DCE3DC', borderRadius: 14, padding: 14, backgroundColor: '#FFFFFF', minHeight: 82 },

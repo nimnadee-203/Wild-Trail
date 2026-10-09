@@ -3,11 +3,13 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import Colors from '../constants/colors';
 import { CommunitySync } from '../components/CommunitySync';
+import { RangerIncidentSync } from '../components/RangerIncidentSync';
 
 export default function RootLayout() {
   return (
     <>
       <CommunitySync />
+      <RangerIncidentSync />
       <StatusBar style="dark" />
       <Stack
         screenOptions={{

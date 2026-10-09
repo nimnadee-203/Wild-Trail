@@ -1,3 +1,4 @@
+import { useCommunityLanguage } from './CommunityLanguage';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Modal,
@@ -47,6 +48,7 @@ function MapPickerModalContent({
   onConfirm: (coords: LocationCoords) => void;
   onClose: () => void;
 }) {
+  const { t } = useCommunityLanguage();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const isCompact = windowWidth < 600 || windowHeight < 700;
   const [selectedPin, setSelectedPin] = useState<LocationCoords>(() => ({
@@ -184,7 +186,7 @@ function MapPickerModalContent({
         <View style={styles.header}>
           <View style={styles.headerTitleRow}>
             <Ionicons name="map" size={20} color="#166534" />
-            <Text style={styles.headerTitle}>Select Location on Map</Text>
+            <Text style={styles.headerTitle}>{t("Select Location on Map")}</Text>
           </View>
           <Pressable onPress={onClose} hitSlop={8} style={styles.closeBtn}>
             <Ionicons name="close" size={22} color="#4B5563" />
@@ -192,12 +194,11 @@ function MapPickerModalContent({
         </View>
 
         <Text style={styles.subtitle}>
-          Tap the map, drag the pin, or choose a preset gate to mark the incident location.
-        </Text>
+          {t("Tap the map, drag the pin, or choose a preset gate to mark the incident location.")}{' '}</Text>
 
         {/* Quick Presets */}
         <View style={styles.presetsRow}>
-          <Text style={styles.presetsLabel}>Presets:</Text>
+          <Text style={styles.presetsLabel}>{t("Presets:")}</Text>
           {GATE_PRESETS.map((p) => {
             const active =
               Math.abs(selectedPin.latitude - p.lat) < 0.001 &&
@@ -214,7 +215,7 @@ function MapPickerModalContent({
                     active && styles.presetChipTextActive,
                   ]}
                 >
-                  {p.name}
+                  {t(p.name)}
                 </Text>
               </Pressable>
             );
@@ -243,20 +244,19 @@ function MapPickerModalContent({
           <View style={styles.coordsRow}>
             <Ionicons name="location-sharp" size={18} color="#166534" />
             <Text style={styles.coordsText}>
-              Coordinates: {selectedPin.latitude.toFixed(5)}° N,{' '}
-              {selectedPin.longitude.toFixed(5)}° E
-            </Text>
+              {t("Coordinates:")}{' '}{selectedPin.latitude.toFixed(5)}{t("° N,")}{' '}
+              {selectedPin.longitude.toFixed(5)}{t("° E")}{' '}</Text>
           </View>
         </View>
 
         {/* Footer Actions */}
         <View style={styles.footer}>
           <Pressable style={styles.cancelBtn} onPress={onClose}>
-            <Text style={styles.cancelBtnText}>Cancel</Text>
+            <Text style={styles.cancelBtnText}>{t("Cancel")}</Text>
           </Pressable>
           <Pressable style={styles.confirmBtn} onPress={handleConfirm}>
             <Ionicons name="checkmark-sharp" size={18} color="#FFFFFF" />
-            <Text style={styles.confirmBtnText}>Confirm Location</Text>
+            <Text style={styles.confirmBtnText}>{t("Confirm Location")}</Text>
           </Pressable>
         </View>
       </ScrollView>
