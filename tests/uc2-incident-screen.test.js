@@ -66,6 +66,48 @@ test('Emergency button opens quick reporting from the normal form', async () => 
   expect(screen.getByText('Send emergency report')).toBeTruthy();
   expect(screen.queryByText('Select the type of incident')).toBeNull();
 });
+
+test('Opening a new report session replaces the previous confirmation with a clean form', async () => {
+  env.params.reportSession = 'first';
+  const screen = await details();
+  await fireEvent.press(screen.getByText('Take Photo'));
+  await fireEvent.press(screen.getByText('Attach Photo'));
+  await review(screen);
+  await fireEvent.press(screen.getByText('Submit Report'));
+  expect(screen.getByText('Report submitted')).toBeTruthy();
+  env.params.reportSession = 'second';
+  env.params.emergency = 'false';
+  await screen.rerender(React.createElement(Screen));
+  expect(screen.getByText('Select the type of incident')).toBeTruthy();
+  expect(screen.queryByText('Report submitted')).toBeNull();
+  await fireEvent.press(screen.getByText('Snare'));
+  expect(screen.getByPlaceholderText(/Describe/).props.value).toBe('');
+  expect(screen.getByText('No photos attached yet')).toBeTruthy();
+  expect(screen.getByLabelText('Medium priority. Needs attention').props.accessibilityState.checked).toBe(true);
+  await review(screen, { location: false });
+  await fireEvent.press(screen.getByText('Submit Report'));
+  expect(Alert.alert).toHaveBeenLastCalledWith('Location required', expect.any(String));
+  expect(createIncident).toHaveBeenCalledTimes(1);
+});
+
+test('Normal and emergency sessions open the correct fresh form after a prior report', async () => {
+  env.params.reportSession = 'emergency-first';
+  env.params.emergency = 'true';
+  const screen = await render(React.createElement(Screen));
+  await fireEvent.changeText(screen.getByPlaceholderText(/Describe/), 'Emergency at gate');
+  await fireEvent.press(screen.getByLabelText('Use GPS location'));
+  await fireEvent.press(screen.getByText('Send emergency report'));
+  expect(screen.getByText('Report submitted')).toBeTruthy();
+  env.params.reportSession = 'normal-next';
+  env.params.emergency = 'false';
+  await screen.rerender(React.createElement(Screen));
+  expect(screen.getByText('Select the type of incident')).toBeTruthy();
+  env.params.reportSession = 'emergency-next';
+  env.params.emergency = 'true';
+  await screen.rerender(React.createElement(Screen));
+  expect(screen.getByText('Send emergency report')).toBeTruthy();
+  expect(screen.getByPlaceholderText(/Describe/).props.value).toBe('');
+});
 test.each([
   ['Snare', 'snare_detected'],
   ['Carcass', 'other'],

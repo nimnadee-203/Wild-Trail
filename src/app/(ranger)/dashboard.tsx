@@ -1,4 +1,5 @@
 import { useRangerIdentity } from '../../hooks/useRangerIdentity';
+import { openRangerIncidentReport } from '../../utils/rangerIncidentNavigation';
 import { RangerAvatar } from '../../components/RangerAvatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WildTrailBrand } from '../../components/WildTrailBrand';
@@ -399,7 +400,7 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => router.push('/(ranger)/report-incident')}
+            onPress={() => openRangerIncidentReport()}
             activeOpacity={0.85}
           >
             <View style={[styles.actionIconWrap, { backgroundColor: '#FEF3C7' }]}>
@@ -438,7 +439,7 @@ export default function DashboardScreen() {
 
         <TouchableOpacity
           style={styles.reportIncidentBtn}
-          onPress={() => router.push('/(ranger)/report-incident')}
+          onPress={() => openRangerIncidentReport()}
           activeOpacity={0.85}
         >
           <View style={styles.reportIncidentIcon}>
