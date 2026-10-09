@@ -62,13 +62,15 @@ function DatePicker({
   onClose: () => void;
 }) {
   const [month, setMonth] = useState(() => {
-    const selected = parseDate(value);
+    const today = formatDate(new Date());
+    const selected = parseDate(value && value >= today ? value : today);
     return new Date(selected.getFullYear(), selected.getMonth(), 1);
   });
   const firstDay = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
   const days = Array.from({ length: firstDay + daysInMonth }, (_, index) => index < firstDay ? null : index - firstDay + 1);
   const selected = parseDate(value);
+  const today = formatDate(new Date());
 
   return (
     <View style={styles.pickerCard}>
@@ -78,7 +80,17 @@ function DatePicker({
         <Pressable onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><Ionicons name="chevron-forward" size={20} color="#2B8263" /></Pressable>
       </View>
       <View style={styles.weekRow}>{['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <Text key={`${day}-${index}`} style={styles.weekDay}>{day}</Text>)}</View>
-      <View style={styles.calendarGrid}>{days.map((day, index) => day === null ? <View key={`empty-${index}`} style={styles.dayCell} /> : <Pressable key={day} style={[styles.dayCell, selected.getFullYear() === month.getFullYear() && selected.getMonth() === month.getMonth() && selected.getDate() === day && styles.selectedDay]} onPress={() => { onChange(formatDate(new Date(month.getFullYear(), month.getMonth(), day))); onClose(); }}><Text style={[styles.dayText, selected.getFullYear() === month.getFullYear() && selected.getMonth() === month.getMonth() && selected.getDate() === day && styles.selectedDayText]}>{day}</Text></Pressable>)}</View>
+      <View style={styles.calendarGrid}>{days.map((day, index) => {
+        if (day === null) return <View key={`empty-${index}`} style={styles.dayCell} />;
+        const date = formatDate(new Date(month.getFullYear(), month.getMonth(), day));
+        const disabled = date < today;
+        const isSelected = !disabled && formatDate(selected) === date;
+        return <Pressable key={day} disabled={disabled} accessibilityRole="button" accessibilityLabel={date} accessibilityState={{ disabled, selected: isSelected }} style={[styles.dayCell, isSelected && styles.selectedDay, disabled && { opacity: 0.35 }]} onPress={() => {
+          if (date < formatDate(new Date())) return;
+          onChange(date);
+          onClose();
+        }}><Text style={[styles.dayText, isSelected && styles.selectedDayText]}>{day}</Text></Pressable>;
+      })}</View>
     </View>
   );
 }
@@ -178,6 +190,8 @@ export default function Patrols() {
     setMapMode('route');
     setMapInstanceKey((key) => key + 1);
     setSaveError('');
+    setDatePickerVisible(false);
+    setTimePicker(null);
     setModalVisible(true);
   };
 
@@ -202,17 +216,25 @@ export default function Patrols() {
   };
 
   const savePatrol = async () => {
+    const showValidationError = (title: string, message: string) => {
+      setSaveError(message);
+      if (Platform.OS !== 'web') Alert.alert(title, message);
+    };
     const requiredFields: Array<keyof PatrolForm> = ['teamName', 'zone', 'date', 'startTime'];
     if (requiredFields.some((field) => !String(form[field] ?? '').trim())) {
-      Alert.alert('Missing details', 'Enter a team, zone, date, and start time.');
+      showValidationError('Missing details', 'Enter a team, zone, date, and start time.');
+      return;
+    }
+    if (form.date < formatDate(new Date())) {
+      showValidationError('Invalid patrol date', 'Choose today or a future date for the patrol.');
       return;
     }
     if (form.route.length < 2) {
-      Alert.alert('Patrol route needed', 'Draw a route on the map with at least two points.');
+      showValidationError('Patrol route needed', 'Draw a route on the map with at least two points.');
       return;
     }
     if (form.checkpoints.length < 1) {
-      Alert.alert('Checkpoints needed', 'Select at least one checkpoint along the route.');
+      showValidationError('Checkpoints needed', 'Select at least one checkpoint along the route.');
       return;
     }
     setSaving(true);
@@ -331,7 +353,6 @@ export default function Patrols() {
         <View style={styles.modalBackdrop}><View style={styles.modal}>
           <View style={styles.modalHeader}><View><Text style={styles.modalTitle}>{editingPatrol ? 'Edit patrol assignment' : 'Schedule a patrol'}</Text><Text style={styles.modalSubtitle}>Assign a ranger and set the patrol details.</Text></View><Pressable onPress={() => setModalVisible(false)}><Ionicons name="close" size={24} color="#71817A" /></Pressable></View>
           <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
-            {saveError ? <View style={styles.errorBanner}><Ionicons name="warning-outline" size={18} color="#B34D3E" /><Text style={styles.errorText}>{saveError}</Text></View> : null}
             <View style={styles.field}><Text style={styles.label}>Patrol date</Text><Pressable style={styles.pickerButton} onPress={() => setDatePickerVisible((visible) => !visible)}><Ionicons name="calendar-outline" size={19} color="#2B8263" /><Text style={[styles.pickerValue, !form.date && styles.placeholder]}>{form.date || 'Choose a date'}</Text><Ionicons name={datePickerVisible ? 'chevron-up' : 'chevron-down'} size={17} color="#71817A" /></Pressable>{datePickerVisible && <DatePicker value={form.date} onChange={(date) => setForm((current) => ({ ...current, date }))} onClose={() => setDatePickerVisible(false)} />}</View>
             <View style={styles.field}><Text style={styles.label}>Team name</Text><TextInput style={styles.input} value={form.teamName} onChangeText={(value) => setForm((current) => ({ ...current, teamName: value }))} placeholder="Enter team name" placeholderTextColor="#9BA8A2" /></View>
             <View style={styles.field}>
@@ -393,6 +414,7 @@ export default function Patrols() {
             <View style={styles.timeRow}><View style={styles.timeField}><Text style={styles.label}>Start time</Text><Pressable style={styles.pickerButton} onPress={() => openTimePicker('startTime')}><Ionicons name="time-outline" size={19} color="#2B8263" /><Text style={[styles.pickerValue, !form.startTime && styles.placeholder]}>{form.startTime || 'Choose time'}</Text></Pressable></View><View style={styles.timeField}><Text style={styles.label}>End time <Text style={styles.optional}>(optional)</Text></Text><Pressable style={styles.pickerButton} onPress={() => openTimePicker('endTime')}><Ionicons name="time-outline" size={19} color="#2B8263" /><Text style={[styles.pickerValue, !form.endTime && styles.placeholder]}>{form.endTime || 'Choose time'}</Text></Pressable></View></View>
             <View style={styles.field}><Text style={styles.label}>Notes <Text style={styles.optional}>(optional)</Text></Text><TextInput style={styles.notesInput} value={form.notes} onChangeText={(value) => setForm((current) => ({ ...current, notes: value }))} placeholder="Add instructions for the ranger" placeholderTextColor="#9BA8A2" multiline /></View>
             {editingPatrol ? <Pressable style={[modernStyles.deleteButton, saving && styles.disabled]} onPress={deletePatrol} disabled={saving}><Ionicons name="trash-outline" size={17} color="#B34D3E" /><Text style={modernStyles.deleteText}>Delete Patrol</Text></Pressable> : null}
+            {saveError ? <View accessibilityRole="alert" style={styles.errorBanner}><Ionicons name="warning-outline" size={18} color="#B34D3E" /><Text style={styles.errorText}>{saveError}</Text></View> : null}
             <Pressable style={[styles.saveButton, saving && styles.disabled]} onPress={savePatrol} disabled={saving}>{saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveText}>{editingPatrol ? 'Save changes' : 'Schedule patrol'}</Text>}</Pressable>
           </ScrollView>
         </View></View>
