@@ -81,6 +81,42 @@ test('UC1 manager validates required fields, route and checkpoints before schedu
   expect(Alert.alert).toHaveBeenLastCalledWith('Checkpoints needed', expect.any(String));
   expect(api.createScheduledPatrol).not.toHaveBeenCalled();
 });
+
+test('manager cannot select past days but can schedule today and future days', async () => {
+  const screen = await mount();
+  await fireEvent.press(screen.getByText('Schedule patrol'));
+  await fireEvent.press(screen.getByText('Choose a date'));
+  expect(screen.getByLabelText('2026-10-08')).toBeDisabled();
+  expect(screen.getByLabelText('2026-10-09')).toBeEnabled();
+  expect(screen.getByLabelText('2026-10-10')).toBeEnabled();
+  await fireEvent.press(screen.getByLabelText('2026-10-08'));
+  expect(screen.getByText('Choose a date')).toBeTruthy();
+  await fireEvent.press(screen.getByLabelText('2026-10-10'));
+  expect(screen.getByText('2026-10-10')).toBeTruthy();
+});
+
+test('manager sees validation on web when scheduling an incomplete patrol', async () => {
+  const { Platform } = require('react-native');
+  const original = Platform.OS;
+  Platform.OS = 'web';
+  try {
+    const screen = await mount();
+    await fireEvent.press(screen.getByText('Schedule patrol'));
+    await fireEvent.press(screen.getAllByText('Schedule patrol').at(-1));
+    expect(screen.getByText('Enter a team, zone, date, and start time.')).toBeTruthy();
+    expect(api.createScheduledPatrol).not.toHaveBeenCalled();
+  } finally {
+    Platform.OS = original;
+  }
+});
+
+test('manager cannot save an assignment on a past date', async () => {
+  const screen = await mount([{ ...assignment, date: '2026-10-08' }]);
+  await fireEvent.press(screen.getByText('Edit assignment'));
+  await fireEvent.press(screen.getByText('Save changes'));
+  expect(screen.getByText('Choose today or a future date for the patrol.')).toBeTruthy();
+  expect(api.updateScheduledPatrol).not.toHaveBeenCalled();
+});
 test('UC1 manager schedules ranger, route, checkpoint, end time and instructions', async () => {
   const screen = await mount();
   await createForm(screen);
