@@ -15,7 +15,10 @@ export function useStorage<T>(key: StorageKey, initialValue: T) {
   }, [key]);
 
   useEffect(() => {
-    loadStoredValue();
+    const timer = setTimeout(() => {
+      loadStoredValue();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadStoredValue]);
 
   const setValue = async (value: T | ((val: T) => T)) => {

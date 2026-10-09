@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import { goBackOrReplace } from '../../utils/navigation';
+import { WildTrailBrand } from '../../components/WildTrailBrand';
+import React, { useState } from 'react';
 import {
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,14 +13,27 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import Colors from '../../constants/colors';
 import { useCameraPermission } from '../../hooks/useCameraPermission';
-import { useLocation } from '../../hooks/useLocation';
+import { LocationLandmarkPicker } from '../../components/community/LocationLandmarkPicker';
+import type { LocationCoords } from '../../components/community/MapPickerModal';
 import { formatCoordinates } from '../../utils/formatting';
+import { QueuedRangerIncident, saveRangerIncident } from '../../services/rangerIncidentQueue';
+import { useRangerIncidentQueue } from '../../hooks/useRangerIncidentQueue';
+import { RangerIncidentOfflinePanel } from '../../components/RangerIncidentOfflinePanel';
+import { IncidentCategory, IncidentSeverity } from '../../types/incident';
 
 type IncidentType = 'Snare' | 'Carcass' | 'Illegal Campsite' | 'Wildlife Sighting' | 'Other';
+
+const PRIORITIES: { value: IncidentSeverity; label: string; hint: string; color: string }[] = [
+  { value: 'low', label: 'Low', hint: 'Routine observation', color: '#245747' },
+  { value: 'medium', label: 'Medium', hint: 'Needs attention', color: '#825400' },
+  { value: 'high', label: 'High', hint: 'Urgent response', color: '#A54213' },
+  { value: 'critical', label: 'Critical', hint: 'Immediate danger', color: '#B42332' },
+];
 
 const INCIDENT_TYPES: { label: IncidentType; icon: keyof typeof Ionicons.glyphMap }[] = [
   { label: 'Snare', icon: 'search-outline' },
@@ -41,50 +56,129 @@ const formatDate = () =>
     .replace(',', '');
 
 export default function ReportIncidentScreen() {
+  const { emergency, reportSession } = useLocalSearchParams<{ emergency?: string; reportSession?: string }>();
+  return <ReportIncidentForm key={`${reportSession ?? 'initial'}:${emergency === 'true'}`} emergency={emergency === 'true'} />;
+}
+
+function ReportIncidentForm({ emergency }: { emergency: boolean }) {
   const router = useRouter();
-  const { location } = useLocation();
-  const { photos, takePhotoWithCamera } = useCameraPermission();
-  const [step, setStep] = useState(1);
-  const [incidentType, setIncidentType] = useState<IncidentType>('Snare');
-  const [customIncidentType, setCustomIncidentType] = useState('');
+  const [isEmergency, setIsEmergency] = useState(emergency);
+  const { photos, takePhotoWithCamera, pickImageFromGallery, addPhoto, removePhoto } = useCameraPermission();
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
+  const [isChoosingPhoto, setIsChoosingPhoto] = useState(false);
+  const [step, setStep] = useState(emergency ? 2 : 1);
+  const [incidentType, setIncidentType] = useState<IncidentType>(emergency ? 'Other' : 'Snare');
+  const [customIncidentType, setCustomIncidentType] = useState(emergency ? 'Emergency incident' : '');
   const [description, setDescription] = useState('');
-  const [dateTime, setDateTime] = useState(formatDate);
+  const [priority, setPriority] = useState<IncidentSeverity>(emergency ? 'critical' : 'medium');
+  const [dateTime] = useState(formatDate);
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [manualLocation, setManualLocation] = useState('');
-  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<LocationCoords | null>(null);
+  const [locationSource, setLocationSource] = useState<'gps' | 'map' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savedReport, setSavedReport] = useState<QueuedRangerIncident>();
+  const { queue, online } = useRangerIncidentQueue();
+  const savedEntry = queue.find(entry => entry.id === savedReport?.id) ?? savedReport;
+  const synced = savedEntry?.syncStatus === 'synced';
 
-  const coordinates = useMemo(
-    () => manualLocation.trim() || formatCoordinates(location?.latitude, location?.longitude),
-    [location, manualLocation]
-  );
+  const coordinateLabel = formatCoordinates(selectedLocation?.latitude, selectedLocation?.longitude);
+  const coordinates = manualLocation.trim()
+    ? `${manualLocation.trim()} (${coordinateLabel})`
+    : coordinateLabel;
   const displayedIncidentType =
     incidentType === 'Other' ? customIncidentType.trim() || 'Other' : incidentType;
   const patrolId = 'PAT-1222-3255';
 
-  const goBack = () => {
-    if (step > 1) {
-      setStep((current) => current - 1);
-    } else {
-      router.back();
+  const choosePhoto = async (source: 'camera' | 'gallery') => {
+    setIsChoosingPhoto(true);
+    try {
+      const uri = await (source === 'camera' ? takePhotoWithCamera() : pickImageFromGallery());
+      if (uri) setPendingPhoto(uri);
+    } catch (error) {
+      Alert.alert('Unable to select photo', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setIsChoosingPhoto(false);
     }
   };
 
-  const submit = () => setStep(4);
+  const attachPhoto = () => {
+    if (pendingPhoto) {
+      addPhoto(pendingPhoto);
+      setPendingPhoto(null);
+    }
+  };
+
+  const goBack = () => {
+    if (step === 4) {
+      goBackOrReplace('/(ranger)/dashboard');
+      return;
+    }
+    if (isEmergency) {
+      goBackOrReplace('/(ranger)/incident-reports');
+    } else if (step > 1) {
+      setStep((current) => current - 1);
+    } else {
+      goBackOrReplace('/(ranger)/dashboard');
+    }
+  };
+
+  const submit = async () => {
+    if (isSubmitting) return;
+    if (!description.trim()) {
+      Alert.alert('Description required', 'Please add a short description before submitting.');
+      return;
+    }
+    if (!selectedLocation) {
+      Alert.alert('Location required', 'Use your current location or select the incident location on the map.');
+      return;
+    }
+
+    const categoryByType: Record<IncidentType, IncidentCategory> = {
+      Snare: 'snare_detected',
+      Carcass: 'other',
+      'Illegal Campsite': 'other',
+      'Wildlife Sighting': 'wildlife_sighting',
+      Other: 'other',
+    };
+
+    setIsSubmitting(true);
+    try {
+      const result = await saveRangerIncident({
+        category: categoryByType[incidentType],
+        severity: isEmergency ? 'critical' : priority,
+        title: displayedIncidentType,
+        description,
+        location: {
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude,
+          ...(selectedLocation.accuracy != null ? { accuracy: selectedLocation.accuracy } : {}),
+          ...(manualLocation.trim() ? { address: manualLocation.trim() } : {}),
+        },
+        photoUris: photos,
+      });
+      setSavedReport(result);
+      setStep(4);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to submit the incident.';
+      Alert.alert('Submission failed', message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={goBack} style={styles.backButton} accessibilityLabel="Go back">
-            <Ionicons name="arrow-back" size={22} color={Colors.light.text} />
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Site Tracker</Text>
-          <View style={styles.logo}>
-            <Ionicons name="leaf-outline" size={20} color={Colors.light.primaryDark} />
-          </View>
+          <WildTrailBrand light title="Report Incident" />
+          <View style={{ width: 24 }} />
         </View>
 
         <ScrollView
@@ -92,9 +186,37 @@ export default function ReportIncidentScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {!isEmergency && step < 3 && (
+            <TouchableOpacity
+              style={styles.emergencyButton}
+              accessibilityRole="button"
+              onPress={() => {
+                setIsEmergency(true);
+                setPriority('critical');
+                if (step === 1) {
+                  setIncidentType('Other');
+                  setCustomIncidentType('Emergency incident');
+                }
+                setStep(2);
+              }}
+            >
+              <Ionicons name="warning" size={24} color="#FFFFFF" />
+              <Text style={styles.primaryButtonText}>Emergency report</Text>
+            </TouchableOpacity>
+          )}
+          <RangerIncidentOfflinePanel />
+          {!isEmergency && <View style={styles.progress}>
+            {['Type', 'Details', 'Review', 'Confirmation'].map((label, index) => <View key={label} style={styles.progressStep}>
+              <View style={[styles.progressCircle, step >= index + 1 && styles.progressActive]}>
+                {step > index + 1 ? <Ionicons name="checkmark" size={16} color="#FFFFFF" /> : <Text style={[styles.progressNumber, step === index + 1 && styles.progressNumberActive]}>{index + 1}</Text>}
+              </View>
+              <Text style={[styles.progressLabel, step === index + 1 && styles.progressLabelActive]}>{label}</Text>
+            </View>)}
+          </View>}
           {step === 1 && (
             <View>
               <Text style={styles.stepHeading}>Select the type of incident</Text>
+              <Text style={styles.introText}>Choose the category that best describes what you found.</Text>
               <View style={styles.typeList}>
                 {INCIDENT_TYPES.map((item) => (
                   <TouchableOpacity
@@ -114,6 +236,7 @@ export default function ReportIncidentScreen() {
                       color={incidentType === item.label ? Colors.light.primaryDark : Colors.light.text}
                     />
                     <Text style={styles.typeLabel}>{item.label}</Text>
+                    <Ionicons name="chevron-forward" size={18} color="#748078" style={{ marginLeft: 'auto' }} />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -138,47 +261,24 @@ export default function ReportIncidentScreen() {
                   </TouchableOpacity>
                 </View>
               )}
-              <View style={styles.landscapePlaceholder}>
-                <Ionicons name="leaf-outline" size={74} color="#B6D1B8" />
-                <Ionicons name="paw-outline" size={40} color="#C9DCC9" />
-              </View>
+              <Text style={styles.photoHelp}>Your report helps the team coordinate a response and protect the park.</Text>
             </View>
           )}
 
           {step === 2 && (
             <View>
-              <Text style={styles.formLabel}>Location (auto-filled)</Text>
-              <View style={styles.readonlyField}>
-                <Ionicons name="location-outline" size={17} color={Colors.light.primaryDark} />
-                <Text style={[styles.fieldText, styles.locationValue]}>{coordinates}</Text>
-                <Ionicons name="checkmark-circle" size={17} color={Colors.light.primaryDark} />
-              </View>
-              <TouchableOpacity
-                style={styles.manualLocationToggle}
-                onPress={() => setIsEditingLocation((editing) => !editing)}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name={isEditingLocation ? 'close-circle-outline' : 'create-outline'}
-                  size={16}
-                  color={Colors.light.primaryDark}
-                />
-                <Text style={styles.manualLocationText}>
-                  {isEditingLocation ? 'Use auto-filled location' : 'Update location manually'}
-                </Text>
-              </TouchableOpacity>
-              {isEditingLocation && (
-                <TextInput
-                  style={styles.manualLocationInput}
-                  value={manualLocation}
-                  onChangeText={setManualLocation}
-                  placeholder="Enter coordinates or a location"
-                  placeholderTextColor="#8DA392"
-                  autoFocus
-                />
-              )}
-              <MapPreview />
+              <Text style={styles.stepHeading}>{isEmergency ? 'Emergency report' : 'Incident details'}</Text>
+              <Text style={styles.introText}>{isEmergency ? 'Critical priority. Select your location, add a short description and send immediately.' : 'Add the location, your observations and any supporting photos.'}</Text>
+              <LocationLandmarkPicker
+                landmarkText={manualLocation}
+                onChangeLandmarkText={setManualLocation}
+                coords={selectedLocation}
+                onCoordsChange={setSelectedLocation}
+                locationSource={locationSource}
+                onLocationSourceChange={setLocationSource}
+              />
 
+              {!isEmergency && <>
               <Text style={styles.formLabel}>Incident Type</Text>
               <TouchableOpacity
                 style={styles.selectField}
@@ -214,16 +314,39 @@ export default function ReportIncidentScreen() {
                 />
               )}
 
+              <Text style={styles.formLabel}>Incident priority</Text>
+              <Text style={styles.priorityHelp}>Choose the urgency based on the risks you observe.</Text>
+              <View style={styles.priorityGrid} accessibilityRole="radiogroup">
+                {PRIORITIES.map((option) => {
+                  const selected = priority === option.value;
+                  return <TouchableOpacity
+                    key={option.value}
+                    style={[styles.priorityOption, selected && { borderColor: option.color, backgroundColor: '#F1F5EF' }]}
+                    onPress={() => setPriority(option.value)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    accessibilityLabel={`${option.label} priority. ${option.hint}`}
+                  >
+                    <View style={styles.priorityOptionTop}>
+                      <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} size={20} color={option.color} />
+                      <Text style={[styles.priorityLabel, { color: option.color }]}>{option.label}</Text>
+                    </View>
+                    <Text style={styles.priorityHint}>{option.hint}</Text>
+                  </TouchableOpacity>;
+                })}
+              </View>
+
               <Text style={styles.formLabel}>Date &amp; Time</Text>
               <View style={styles.readonlyField}>
                 <Text style={styles.fieldText}>{dateTime}</Text>
                 <Ionicons name="calendar-outline" size={18} color={Colors.light.text} />
               </View>
 
-              <Text style={styles.formLabel}>Short Description (Required)</Text>
+              </>}
+              <Text style={styles.formLabel}>Description · Required</Text>
               <TextInput
                 style={styles.description}
-                placeholder="Type your notes"
+                placeholder="Describe what you found, nearby landmarks and any immediate risks…"
                 placeholderTextColor="#A7AFA9"
                 value={description}
                 onChangeText={setDescription}
@@ -231,42 +354,85 @@ export default function ReportIncidentScreen() {
                 textAlignVertical="top"
               />
 
-              <TouchableOpacity style={styles.photoButton} onPress={takePhotoWithCamera} activeOpacity={0.8}>
+              {isEmergency && <TouchableOpacity
+                style={[styles.emergencyButton, isSubmitting && styles.disabledButton]}
+                onPress={submit}
+                disabled={isSubmitting}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: isSubmitting, busy: isSubmitting }}
+              >
+                <Ionicons name="warning" size={22} color="#FFFFFF" />
+                <Text style={styles.primaryButtonText}>{isSubmitting ? 'Sending emergency report…' : 'Send emergency report'}</Text>
+              </TouchableOpacity>}
+              {!isEmergency && <>
+              <Text style={styles.formLabel}>Supporting photos · Optional</Text>
+              <TouchableOpacity style={styles.photoButton} onPress={() => choosePhoto('camera')} disabled={isChoosingPhoto} activeOpacity={0.8}>
                 <Ionicons name="camera" size={19} color={Colors.light.primaryDark} />
                 <Text style={styles.outlineButtonText}>Take Photo</Text>
               </TouchableOpacity>
-              {photos.length > 0 ? (
-                <Image source={{ uri: photos[photos.length - 1] }} style={styles.photoPreview} />
-              ) : (
-                <View style={styles.photoEmpty}>
-                  <Ionicons name="image-outline" size={56} color="#C4CDC7" />
+              <TouchableOpacity style={styles.photoButton} onPress={() => choosePhoto('gallery')} disabled={isChoosingPhoto} activeOpacity={0.8}>
+                <Ionicons name="images-outline" size={19} color={Colors.light.primaryDark} />
+                <Text style={styles.outlineButtonText}>Choose from Gallery</Text>
+              </TouchableOpacity>
+              {pendingPhoto && (
+                <View>
+                  <Image source={{ uri: pendingPhoto }} style={styles.photoPreview} />
+                  <TouchableOpacity style={styles.primaryButton} onPress={attachPhoto} activeOpacity={0.85}>
+                    <Text style={styles.primaryButtonText}>Attach Photo</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.photoHelp}>Adds this photo to your report. Photos are uploaded when you submit.</Text>
+                  <TouchableOpacity style={styles.photoButton} onPress={() => setPendingPhoto(null)}>
+                    <Text style={styles.outlineButtonText}>Discard Photo</Text>
+                  </TouchableOpacity>
                 </View>
               )}
-              <TouchableOpacity style={styles.primaryButton} onPress={() => setStep(3)} activeOpacity={0.85}>
-                <Text style={styles.primaryButtonText}>Next</Text>
+              {photos.map((uri, index) => (
+                <View key={`${uri}-${index}`}>
+                  <Image source={{ uri }} style={styles.photoPreview} />
+                  <TouchableOpacity style={styles.photoButton} onPress={() => removePhoto(index)} accessibilityLabel={`Remove photo ${index + 1}`}>
+                    <Text style={styles.outlineButtonText}>Remove Photo {index + 1}</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {photos.length === 0 && !pendingPhoto && (
+                <View style={styles.photoEmpty}>
+                  <Ionicons name="image-outline" size={56} color="#C4CDC7" />
+                  <Text style={styles.photoHelp}>No photos attached yet</Text>
+                </View>
+              )}
+              <TouchableOpacity style={[styles.primaryButton, (isChoosingPhoto || !!pendingPhoto) && styles.disabledButton]} disabled={isChoosingPhoto || !!pendingPhoto} onPress={() => setStep(3)} activeOpacity={0.85}>
+                <Text style={styles.primaryButtonText}>Review Report</Text>
               </TouchableOpacity>
+              </>}
             </View>
           )}
 
           {step === 3 && (
             <View>
-              <Text style={styles.stepHeading}>Summary</Text>
+              <Text style={styles.stepHeading}>Review your report</Text>
+              <Text style={styles.introText}>Check the details before sending. Use the back arrow to make changes.</Text>
               <View style={styles.summaryCard}>
                 <SummaryRow label="Patrol ID:" value={patrolId} />
                 <SummaryRow label="Location:" value={coordinates} />
                 <SummaryRow label="Incident Type:" value={displayedIncidentType} />
+                <SummaryRow label="Priority:" value={PRIORITIES.find(option => option.value === priority)!.label} />
                 <SummaryRow label="Date & Time:" value={dateTime} />
                 <SummaryRow label="Short Description:" value={description || 'No description added'} />
-                {photos.length > 0 && <Image source={{ uri: photos[photos.length - 1] }} style={styles.summaryPhoto} />}
+                {photos.map((uri, index) => <Image key={`${uri}-${index}`} source={{ uri }} style={styles.confirmationPhoto} resizeMode="contain" accessibilityLabel={`Incident photo ${index + 1}`} />)}
               </View>
-              <TouchableOpacity style={styles.primaryButton} onPress={submit} activeOpacity={0.85}>
-                <Text style={styles.primaryButtonText}>Submit</Text>
+              <TouchableOpacity
+                style={[styles.primaryButton, isSubmitting && styles.disabledButton]}
+                onPress={submit}
+                disabled={isSubmitting}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.primaryButtonText}>{isSubmitting ? 'Submitting report…' : 'Submit Report'}</Text>
               </TouchableOpacity>
               <View style={styles.offlineCard}>
-                <Ionicons name="cloud-offline-outline" size={32} color={Colors.light.text} />
-                <View>
-                  <Text style={styles.offlineTitle}>Saved Offline</Text>
-                  <Text style={styles.offlineText}>Pending Sync</Text>
+                <Ionicons name="information-circle-outline" size={24} color="#61716A" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.offlineTitle}>{online ? 'Ready to save and sync' : 'Ready to save offline'}</Text>
+                  <Text style={styles.offlineText}>Your report and photos are saved on this device first. They sync automatically when connectivity returns.</Text>
                 </View>
               </View>
             </View>
@@ -274,13 +440,24 @@ export default function ReportIncidentScreen() {
 
           {step === 4 && (
             <View>
-              <Text style={styles.stepHeading}>Sync Confirmation</Text>
+              <Text style={styles.stepHeading}>{synced ? 'Report submitted' : 'Report saved on this device'}</Text>
+              <Text style={styles.introText}>{synced ? 'Your report and photos have synced with Operations.' : 'Your incident is safely saved locally. Keep the app open or reopen it when connectivity returns to sync.'}</Text>
               <View style={styles.summaryCard}>
                 <SummaryRow label="Patrol ID:" value={patrolId} />
                 <SummaryRow label="Location:" value={coordinates} />
                 <SummaryRow label="Incident Type:" value={displayedIncidentType} />
+                <SummaryRow label="Priority:" value={PRIORITIES.find(option => option.value === priority)!.label} />
                 <SummaryRow label="Date & Time:" value={dateTime} />
                 <SummaryRow label="Short Description:" value={description || 'No description added'} />
+                {photos.map((uri, index) => (
+                  <Image
+                    key={`${uri}-${index}`}
+                    source={{ uri }}
+                    style={styles.confirmationPhoto}
+                    resizeMode="contain"
+                    accessibilityLabel={`Incident photo ${index + 1}`}
+                  />
+                ))}
               </View>
               <View style={styles.successCard}>
                 <View style={styles.successIcon}>
@@ -288,10 +465,13 @@ export default function ReportIncidentScreen() {
                 </View>
                 <View>
                   <Text style={styles.successTitle}>Saved Successfully</Text>
-                  <Text style={styles.successTitle}>Synced</Text>
+                  <Text style={styles.successTitle}>{synced ? 'Synced' : savedEntry?.syncStatus === 'syncing' ? 'Syncing…' : 'Waiting to sync'}</Text>
+                  <Text style={styles.successMeta}>Reference: {savedReport?.id}</Text>
                   <Text style={styles.successMeta}>Date &amp; Time: {dateTime}</Text>
                 </View>
               </View>
+              {savedEntry?.error && <Text style={styles.photoWarning}>Sync needs attention: {savedEntry.error} Your report remains saved on this device.</Text>}
+              <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace('/(ranger)/dashboard')}><Text style={styles.primaryButtonText}>Back to Dashboard</Text></TouchableOpacity>
             </View>
           )}
         </ScrollView>
@@ -309,28 +489,24 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MapPreview() {
-  return (
-    <View style={styles.mapPreview} accessibilityLabel="Map preview of the incident location">
-      <View style={styles.mapRoadHorizontal} />
-      <View style={styles.mapRoadDiagonal} />
-      <View style={styles.mapRiver} />
-      <View style={styles.mapPark}>
-        <Ionicons name="leaf" size={18} color="#8DBA91" />
-        <Ionicons name="leaf" size={13} color="#A8CAA7" />
-      </View>
-      <View style={styles.mapPin}>
-        <Ionicons name="location" size={30} color={Colors.light.primaryDark} />
-      </View>
-      <View style={styles.mapLabel}>
-        <Text style={styles.mapLabelText}>Incident location</Text>
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+  emergencyButton: { minHeight: 56, backgroundColor: '#B42332', borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 20, marginTop: 8 },
+  priorityHelp: { fontSize: 13, color: '#53655B', lineHeight: 20, marginBottom: 12 },
+  priorityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  priorityOption: { flexGrow: 1, flexBasis: '45%', borderWidth: 2, borderColor: '#DCE3DC', borderRadius: 14, padding: 14, backgroundColor: '#FFFFFF', minHeight: 82 },
+  priorityOptionTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  priorityLabel: { fontSize: 15, fontWeight: '700' },
+  priorityHint: { fontSize: 12, color: '#43564A', marginTop: 8 },
+  progress: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8DF', borderRadius: 16, paddingVertical: 16, paddingHorizontal: 8, marginBottom: 24 },
+  progressStep: { flex: 1, alignItems: 'center', gap: 7 },
+  progressCircle: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#EEF1E9', alignItems: 'center', justifyContent: 'center' },
+  progressActive: { backgroundColor: '#245747' },
+  progressNumber: { fontSize: 12, fontWeight: '700', color: '#748078' },
+  progressNumberActive: { color: '#FFFFFF' },
+  progressLabel: { fontSize: 12, color: '#748078' },
+  progressLabelActive: { color: '#245747', fontWeight: '700' },
+  introText: { color: '#748078', fontSize: 14, lineHeight: 22, marginBottom: 20 },
+  safeArea: { flex: 1, backgroundColor: '#F5F6F0' },
   container: { flex: 1 },
   header: {
     height: 58,
@@ -352,17 +528,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFFFFF',
   },
-  content: { padding: 18, paddingBottom: 32 },
+  content: { padding: 20, paddingBottom: 36, width: '100%', maxWidth: 600, alignSelf: 'center' },
   stepHeading: {
-    fontSize: 14,
+    fontSize: 24,
     fontWeight: '700',
     color: Colors.light.text,
-    textAlign: 'center',
+    textAlign: 'left',
     marginBottom: 12,
   },
   typeList: { gap: 8 },
   typeOption: {
-    height: 52,
+    minHeight: 68,
     borderWidth: 1,
     borderColor: Colors.light.primaryDark,
     backgroundColor: '#FFFFFF',
@@ -393,10 +569,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
     backgroundColor: '#F4FAF5',
   },
-  formLabel: { fontSize: 10, fontWeight: '600', color: Colors.light.text, marginTop: 9, marginBottom: 4 },
+  formLabel: { fontSize: 12, fontWeight: '600', color: Colors.light.text, marginTop: 9, marginBottom: 4 },
   readonlyField: {
-    minHeight: 38,
-    borderRadius: 6,
+    minHeight: 50,
+    borderRadius: 12,
     backgroundColor: '#F4F6F4',
     borderWidth: 1,
     borderColor: '#E2E7E2',
@@ -413,14 +589,14 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingVertical: 7,
   },
-  manualLocationText: { color: Colors.light.primaryDark, fontSize: 10, fontWeight: '700' },
+  manualLocationText: { color: Colors.light.primaryDark, fontSize: 12, fontWeight: '700' },
   manualLocationInput: {
-    height: 38,
-    borderRadius: 6,
+    minHeight: 50,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.light.primaryDark,
     paddingHorizontal: 10,
-    fontSize: 11,
+    fontSize: 14,
     color: Colors.light.text,
     backgroundColor: '#FFFFFF',
     marginBottom: 8,
@@ -485,8 +661,8 @@ const styles = StyleSheet.create({
   },
   mapLabelText: { fontSize: 9, color: Colors.light.primaryDark, fontWeight: '700' },
   selectField: {
-    height: 38,
-    borderRadius: 6,
+    minHeight: 50,
+    borderRadius: 12,
     backgroundColor: '#F4F6F4',
     borderWidth: 1,
     borderColor: '#DDE3DE',
@@ -495,21 +671,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  fieldText: { fontSize: 11, color: Colors.light.text },
-  dropdown: { borderWidth: 1, borderColor: '#DDE3DE', backgroundColor: '#FFFFFF', borderRadius: 6 },
+  fieldText: { fontSize: 14, color: Colors.light.text },
+  dropdown: { borderWidth: 1, borderColor: '#DDE3DE', backgroundColor: '#FFFFFF', borderRadius: 12 },
   dropdownItem: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#EEF1EE' },
   description: {
-    height: 74,
-    borderRadius: 6,
+    height: 128,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#DDE3DE',
     padding: 10,
-    fontSize: 11,
+    fontSize: 14,
     color: Colors.light.text,
   },
   photoButton: {
-    height: 38,
-    borderRadius: 6,
+    minHeight: 50,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.light.primaryDark,
     flexDirection: 'row',
@@ -518,7 +694,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 10,
   },
-  outlineButtonText: { color: Colors.light.primaryDark, fontSize: 11, fontWeight: '700' },
+  outlineButtonText: { color: Colors.light.primaryDark, fontSize: 14, fontWeight: '700' },
   photoEmpty: {
     height: 90,
     borderRadius: 7,
@@ -530,32 +706,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 8,
   },
-  photoPreview: { height: 120, borderRadius: 7, marginTop: 8 },
+  photoPreview: { height: 220, borderRadius: 7, marginTop: 8 },
+  photoHelp: { fontSize: 12, lineHeight: 18, color: Colors.light.text, marginTop: 8 },
   primaryButton: {
-    height: 38,
-    borderRadius: 6,
+    minHeight: 50,
+    borderRadius: 12,
     backgroundColor: Colors.light.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
   },
-  primaryButtonText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   disabledButton: { backgroundColor: '#AAB9AE' },
   otherTypeInput: {
-    height: 38,
-    borderRadius: 6,
+    minHeight: 50,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#B9D6BD',
     paddingHorizontal: 10,
-    fontSize: 11,
+    fontSize: 14,
     color: Colors.light.text,
     backgroundColor: '#FFFFFF',
   },
-  summaryCard: { borderWidth: 1, borderColor: '#DDE3DE', borderRadius: 8, padding: 12 },
-  summaryRow: { marginBottom: 8 },
-  summaryLabel: { fontSize: 10, fontWeight: '700', color: Colors.light.text },
-  summaryValue: { fontSize: 10, color: Colors.light.primaryDark, marginTop: 2, lineHeight: 14 },
+  summaryCard: { borderWidth: 1, borderColor: '#DDE3DE', borderRadius: 18, padding: 20, backgroundColor: '#FFFFFF' },
+  summaryRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#EDF0E9' },
+  summaryLabel: { fontSize: 12, fontWeight: '600', color: '#748078' },
+  summaryValue: { fontSize: 14, color: '#245747', marginTop: 5, lineHeight: 22 },
   summaryPhoto: { height: 92, borderRadius: 7, marginTop: 2 },
+  confirmationPhoto: { width: '100%', height: 200, borderRadius: 7, marginTop: 10 },
   offlineCard: {
     minHeight: 62,
     borderWidth: 1,
@@ -567,8 +745,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
   },
-  offlineTitle: { fontSize: 11, fontWeight: '700', color: Colors.light.text },
-  offlineText: { fontSize: 10, color: Colors.light.muted, marginTop: 3 },
+  offlineTitle: { fontSize: 14, fontWeight: '700', color: Colors.light.text },
+  offlineText: { fontSize: 12, color: Colors.light.muted, marginTop: 3 },
   successCard: {
     marginTop: 22,
     minHeight: 82,
@@ -590,6 +768,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  photoWarning: { fontSize: 13, lineHeight: 20, color: '#9A5B18', marginTop: 12 },
   successTitle: { fontSize: 12, fontWeight: '700', color: Colors.light.text },
-  successMeta: { fontSize: 10, color: Colors.light.text, marginTop: 5 },
+  successMeta: { fontSize: 12, color: Colors.light.text, marginTop: 5 },
 });

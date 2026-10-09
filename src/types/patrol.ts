@@ -1,5 +1,3 @@
-import { LocationData } from './incident';
-
 export type PatrolStatus = 'active' | 'paused' | 'completed' | 'cancelled';
 
 export interface GPSCoordinate {
@@ -52,3 +50,114 @@ export interface ScheduledPatrol {
 }
 
 export type ScheduledPatrolInput = Omit<ScheduledPatrol, 'id' | 'createdAt' | 'updatedAt'>;
+
+export type RangerStatus =
+  | 'AVAILABLE'
+  | 'ON_PATROL'
+  | 'RESPONDING_TO_ALERT'
+  | 'OFF_DUTY'
+  | 'ON_LEAVE'
+  | 'UNAVAILABLE';
+
+export interface AssignedPatrol {
+  id: string;
+  name: string;
+  park: string;
+  date: string;
+  startTime: string;
+  duration: number; // in hours
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  status: 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  instructions: string;
+  route: [number, number][]; // Array of [longitude, latitude] tuples
+  plannedDistanceKm?: number;
+  completionPercentage?: number;
+  completedDistanceKm?: number;
+}
+
+export interface ActualPathPoint {
+  latitude: number;
+  longitude: number;
+  timestamp: string; // e.g. "08:02"
+  syncStatus?: 'PENDING_SYNC' | 'SUBMITTED';
+}
+
+export type WaypointType =
+  | 'OBSERVATION'
+  | 'SIGHTING'
+  | 'WATER_POINT'
+  | 'PERIMETER_CHECK'
+  | 'POACHING_TRAIL'
+  | 'FENCE_BREACH'
+  | 'GENERAL';
+
+export interface MarkedWaypoint {
+  id: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string; // e.g. "08:05 PM"
+  timestampMs: number;
+  type: WaypointType;
+  notes?: string;
+  syncStatus?: 'PENDING_SYNC' | 'SUBMITTED';
+}
+
+export type ObservationType =
+  | 'Wildlife Sighting'
+  | 'Illegal Activity'
+  | 'Habitat Condition'
+  | 'Fence Damage'
+  | 'Water Source'
+  | 'Other';
+
+export interface PatrolObservation {
+  id: string;
+  patrolId?: string;
+  patrolName?: string;
+  park?: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+  type: ObservationType;
+  description: string;
+  syncStatus?: 'PENDING_SYNC' | 'SUBMITTED';
+}
+
+export interface ActivePatrolSession {
+  sessionId: string;
+  patrolId: string;
+  patrolName: string;
+  park: string;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  patrolStatus: 'IN_PROGRESS' | 'COMPLETED';
+  rangerStatus: RangerStatus;
+  startTime: string;
+  startTimestamp: number;
+  routeCoords: [number, number][];
+  pointCount: number;
+  actualPath: ActualPathPoint[];
+  markedWaypoints: MarkedWaypoint[];
+  observations: PatrolObservation[];
+  plannedDistanceKm?: number;
+  completionPercentage?: number;
+}
+
+export interface CompletedPatrolSummary {
+  patrolId: string;
+  patrolName: string;
+  park: string;
+  priority: string;
+  startTime: string;
+  endTime: string;
+  distanceKm: number;
+  plannedDistanceKm?: number;
+  completionPercentage?: number;
+  actualPath: ActualPathPoint[];
+  markedWaypoints: MarkedWaypoint[];
+  observations: PatrolObservation[];
+  patrolStatus: 'COMPLETED';
+  rangerStatus: 'AVAILABLE';
+  completedAt: string;
+}
+
+

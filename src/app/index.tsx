@@ -1,160 +1,65 @@
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Badge, Button, Card } from '../components/ui';
-import Colors from '../constants/colors';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
-export default function HomeScreen() {
+export default function LaunchScreen() {
   const router = useRouter();
+  const [imageReady, setImageReady] = useState(false);
+  const [minimumElapsed, setMinimumElapsed] = useState(false);
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            Wildlife Protection & Monitoring System
-          </Text>
+  useEffect(() => {
+    const minimum = setTimeout(() => setMinimumElapsed(true), 1600);
+    // A failed image must never prevent entry into the app.
+    const fallback = setTimeout(() => setImageReady(true), 3000);
+    return () => { clearTimeout(minimum); clearTimeout(fallback); };
+  }, []);
 
-          <Text style={styles.subtitle}>
-            SE3070 Case Studies in Software Engineering Mobile Application
-          </Text>
-        </View>
+  useEffect(() => {
+    if (imageReady && minimumElapsed) router.replace('/(auth)/login');
+  }, [imageReady, minimumElapsed, router]);
 
-        <Card style={styles.portalCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Ranger Portal</Text>
-            <Badge label="Ranger Access" variant="success" />
-          </View>
-
-          <Text style={styles.cardDescription}>
-            GPS patrol tracking, incident reporting (poaching / illegal activity),
-            and wildlife risk alert monitoring.
-          </Text>
-
-          <Button
-            title="Open Ranger Dashboard"
-            variant="primary"
-            onPress={() => router.push('/(ranger)/dashboard')}
-          />
-        </Card>
-
-        <Card style={styles.portalCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Community Reporter Portal</Text>
-            <Badge label="Villager Access" variant="warning" />
-          </View>
-
-          <Text style={styles.cardDescription}>
-            Report human-wildlife conflicts (crop damage, animal intrusions)
-            and view historical report statuses.
-          </Text>
-
-          <Button
-            title="Community Dashboard Unavailable"
-            variant="secondary"
-            disabled
-          />
-        </Card>
-
-        <Card style={styles.portalCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Park Manager Dashboard</Text>
-            <Badge label="Manager Access" variant="info" />
-          </View>
-
-          <Text style={styles.cardDescription}>
-            Monitor park activity, coordinate patrols, respond to alerts,
-            and generate operational reports.
-          </Text>
-
-          <Button
-            title="Open Manager Dashboard"
-            variant="primary"
-            onPress={() => router.push('/(manager)/overview' as any)}
-          />
-        </Card>
-
-        <Card style={styles.portalCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Authentication</Text>
-            <Badge label="Account" variant="info" />
-          </View>
-
-          <Text style={styles.cardDescription}>
-            Sign in with your ranger badge number or community reporter ID.
-          </Text>
-
-          <Button
-            title="Sign In / Switch Account"
-            variant="outline"
-            onPress={() => router.push('/(auth)/login')}
-          />
-        </Card>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Project initialized with Expo Router, TypeScript, ESLint,
-            Prettier, AsyncStorage, Expo Location, and Expo Camera / ImagePicker.
-          </Text>
-        </View>
-      </ScrollView>
+  return <View style={s.screen}>
+    <StatusBar style="light" />
+    <Image source={require('../../assets/images/wildlife/elephant.jpg')} style={s.background} resizeMode="cover" onLoadEnd={() => setImageReady(true)} accessible={false} />
+    <View style={s.shade} />
+    <SafeAreaView style={s.safe}>
+      <View style={s.top}><View style={s.rule} /><Text style={s.eyebrow}>SRI LANKA · WILDLIFE CONSERVATION</Text><View style={s.rule} /></View>
+      <View style={s.center}>
+        <View style={s.logoFrame}><Image source={require('../../assets/images/WildTrailLogo.jpg')} style={s.logo} resizeMode="contain" accessibilityLabel="WildTrail logo" /></View>
+        <Text style={s.name}>WildTrail</Text>
+        <Text style={s.tagline}>Protecting wildlife. Connecting people.</Text>
+        <View style={s.accent} />
+        <Text style={s.department}>Department of{ '\n' }Wildlife Conservation</Text>
+        <Text style={s.country}>SRI LANKA</Text>
+      </View>
+      <View style={s.footer}>
+        <ActivityIndicator color="#E2EBDD" size="small" accessibilityLabel="Opening WildTrail" />
+        <Text style={s.loading}>Welcome to your field workspace</Text>
+        <Text style={s.caption}>For our wildlife. For generations to come.</Text>
+      </View>
     </SafeAreaView>
-  );
+  </View>;
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  container: {
-    padding: 20,
-  },
-  header: {
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: Colors.light.primaryDark,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.light.muted,
-    marginTop: 6,
-    textAlign: 'center',
-  },
-  portalCard: {
-    marginBottom: 16,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  cardDescription: {
-    fontSize: 14,
-    color: Colors.light.muted,
-    marginBottom: 14,
-    lineHeight: 20,
-  },
-  footer: {
-    marginTop: 20,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: '#E5E7EB',
-  },
-  footerText: {
-    fontSize: 12,
-    color: Colors.light.muted,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#173D2D' },
+  background: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, width: '100%', height: '100%' },
+  shade: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(10, 37, 24, 0.73)' },
+  safe: { flex: 1, justifyContent: 'space-between', paddingHorizontal: 28 },
+  top: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 24 },
+  rule: { height: 1, backgroundColor: 'rgba(213,229,192,0.35)', flex: 1 },
+  eyebrow: { color: '#D0DFD4', fontSize: 8, fontWeight: '600', letterSpacing: 1.4, textAlign: 'center', flexShrink: 1 },
+  center: { alignItems: 'center', paddingVertical: 24 },
+  logoFrame: { backgroundColor: '#FFFFFF', padding: 12, borderRadius: 24, borderWidth: 1, borderColor: '#E2EBDD' },
+  logo: { width: 94, height: 106, borderRadius: 12 },
+  name: { color: '#FFFFFF', fontSize: 42, fontWeight: '800', letterSpacing: -0.7, marginTop: 24 },
+  tagline: { color: '#D0DFD4', fontSize: 13, lineHeight: 21, textAlign: 'center', marginTop: 8 },
+  accent: { width: 34, height: 2, backgroundColor: '#D5E5C0', marginVertical: 26 },
+  department: { color: '#FFFFFF', fontSize: 21, lineHeight: 29, fontWeight: '600', textAlign: 'center' },
+  country: { color: '#D5E5C0', fontSize: 10, letterSpacing: 3, fontWeight: '700', marginTop: 12 },
+  footer: { alignItems: 'center', gap: 12, paddingBottom: 24 },
+  loading: { color: '#E2EBDD', fontSize: 12 },
+  caption: { color: '#BBCFBD', fontSize: 10, textAlign: 'center', marginTop: 8 },
 });

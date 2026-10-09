@@ -14,13 +14,14 @@ export function PatrolRouteMap({
 }: PatrolRouteMapProps) {
   const webViewRef = useRef<WebView>(null);
   const html = useMemo(
-    () => createPatrolMapHtml({
-      editable,
-      mode: 'route',
-      route: [],
-      checkpoints: [],
-      overlays: [],
-    }),
+    () =>
+      createPatrolMapHtml({
+        editable,
+        mode,
+        route,
+        checkpoints,
+        overlays,
+      }),
     [editable]
   );
 
@@ -58,7 +59,7 @@ export function PatrolRouteMap({
         source={{ html }}
         style={styles.map}
         onLoadEnd={syncMap}
-        onMessage={(event) => {
+        onMessage={(event: any) => {
           try {
             const payload = JSON.parse(event.nativeEvent.data) as {
               type?: string;

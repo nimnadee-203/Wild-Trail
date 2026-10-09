@@ -113,6 +113,15 @@ export function createPatrolMapHtml({
         });
       }
 
+      function centerCamera() {
+        if (!map) return;
+        if (route && route.length > 0) {
+          map.setCenter([route[0].longitude, route[0].latitude]);
+        } else if (checkpoints && checkpoints.length > 0) {
+          map.setCenter([checkpoints[0].longitude, checkpoints[0].latitude]);
+        }
+      }
+
       function addLayers() {
         if (!map.getLayer('draft-route-line')) {
           map.addLayer({ id: 'draft-route-line', type: 'line', source: 'draft-route', paint: { 'line-color': ROUTE_COLOR, 'line-width': 4 } });
@@ -150,6 +159,7 @@ export function createPatrolMapHtml({
           }
         });
         render();
+        centerCamera();
       }
 
       window.setPatrolMapMode = function(nextMode) { mode = nextMode; };
@@ -158,6 +168,7 @@ export function createPatrolMapHtml({
         checkpoints = next.checkpoints || [];
         overlays = next.overlays || overlays;
         render();
+        centerCamera();
       };
 
       if (!TOKEN) {

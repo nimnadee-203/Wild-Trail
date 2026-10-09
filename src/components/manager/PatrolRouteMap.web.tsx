@@ -118,10 +118,12 @@ export function PatrolRouteMap({
   const onChangeRef = useRef(onChange);
   const routeRef = useRef(route);
   const checkpointsRef = useRef(checkpoints);
-  modeRef.current = mode;
-  onChangeRef.current = onChange;
-  routeRef.current = route;
-  checkpointsRef.current = checkpoints;
+  useEffect(() => {
+    modeRef.current = mode;
+    onChangeRef.current = onChange;
+    routeRef.current = route;
+    checkpointsRef.current = checkpoints;
+  }, [mode, onChange, route, checkpoints]);
 
   useEffect(() => {
     ensureMapboxCss();
@@ -163,6 +165,11 @@ export function PatrolRouteMap({
     map.on('load', () => {
       renderMap(map, routeRef.current, checkpointsRef.current, overlays);
       addLayers(map, overlays);
+      if (routeRef.current.length > 0) {
+        map.setCenter([routeRef.current[0].longitude, routeRef.current[0].latitude]);
+      } else if (checkpointsRef.current.length > 0) {
+        map.setCenter([checkpointsRef.current[0].longitude, checkpointsRef.current[0].latitude]);
+      }
     });
     map.on('click', handleClick);
 
@@ -177,6 +184,11 @@ export function PatrolRouteMap({
     if (!map?.loaded()) return;
     renderMap(map, route, checkpoints, overlays);
     addLayers(map, overlays);
+    if (route.length > 0) {
+      map.setCenter([route[0].longitude, route[0].latitude]);
+    } else if (checkpoints.length > 0) {
+      map.setCenter([checkpoints[0].longitude, checkpoints[0].latitude]);
+    }
   }, [checkpoints, overlays, route]);
 
   if (!APP_CONFIG.mapboxAccessToken) {

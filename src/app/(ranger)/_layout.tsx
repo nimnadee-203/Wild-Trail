@@ -1,10 +1,21 @@
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
+import { useRoleGuard } from '../../hooks/useRoleGuard';
 
 export default function RangerLayout() {
+  const { isChecking, isAuthorized } = useRoleGuard(['ranger', 'admin']);
+
+  if (isChecking || !isAuthorized) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+      </View>
+    );
+  }
+
   return (
     <Tabs
       screenOptions={{
@@ -41,6 +52,24 @@ export default function RangerLayout() {
         }}
       />
       <Tabs.Screen
+        name="patrol"
+        options={{
+          title: 'Patrol',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'compass' : 'compass-outline'} size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="incident-reports"
+        options={{
+          title: 'Incidents',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'documents' : 'documents-outline'} size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="alerts"
         options={{
           title: 'Alerts',
@@ -57,15 +86,6 @@ export default function RangerLayout() {
         }}
       />
       <Tabs.Screen
-        name="map"
-        options={{
-          title: 'Map',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'map' : 'map-outline'} size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
@@ -75,12 +95,12 @@ export default function RangerLayout() {
         }}
       />
 
-      {/* Sub-screens accessed via Home actions, hidden from bottom tab icons */}
+      {/* Sub-screens accessed via actions, hidden from bottom tab icons */}
       <Tabs.Screen
-        name="patrol"
+        name="map"
         options={{
           href: null,
-          title: 'GPS Patrol Tracking',
+          title: 'Map',
         }}
       />
       <Tabs.Screen
@@ -95,6 +115,12 @@ export default function RangerLayout() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   iconWrap: {
     position: 'relative',
   },

@@ -1,12 +1,12 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { WildTrailBrand } from '../../../components/WildTrailBrand';
 import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
-  Image,
   Alert,
   Platform,
 } from 'react-native';
@@ -15,13 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../../constants/colors';
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
-
-const ELEPHANT_E014_IMG =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Asian_elephant_-_melbourne_zoo.jpg/320px-Asian_elephant_-_melbourne_zoo.jpg';
-const ELEPHANT_E011_IMG =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Elephant_near_ndutu.jpg/320px-Elephant_near_ndutu.jpg';
-const LEOPARD_IMG =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Leopard_africa.jpg/320px-Leopard_africa.jpg';
+import { WildlifeAlertImage } from '../../../components/WildlifeAlertImage';
 
 interface AlertData {
   id: string;
@@ -120,7 +114,7 @@ export default function AlertsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       {/* Top Navigation Bar */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -132,8 +126,7 @@ export default function AlertsScreen() {
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>Wildlife Risk Alerts</Text>
-            <Text style={styles.headerSubtitle}>Active Geofence Breaches & Early Warnings</Text>
+            <WildTrailBrand light title="Wildlife Risk Alerts" />
           </View>
         </View>
 
@@ -207,7 +200,7 @@ export default function AlertsScreen() {
 
             {/* Animal Info */}
             <View style={styles.animalRow}>
-              <Image source={{ uri: alert.image }} style={styles.animalImage} />
+              <WildlifeAlertImage uri={alert.image} species={alert.species} animalId={alert.animalId} style={styles.animalImage} />
               <View style={styles.animalInfo}>
                 <Text style={styles.animalId}>{alert.animalId}</Text>
                 <Text style={styles.speciesText}>{alert.species}</Text>

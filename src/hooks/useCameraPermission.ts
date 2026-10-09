@@ -9,13 +9,12 @@ export function useCameraPermission() {
   const pickImageFromGallery = async (): Promise<string | null> => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
+      allowsEditing: false,
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const uri = result.assets[0].uri;
-      setPhotos((prev) => [...prev, uri]);
       return uri;
     }
     return null;
@@ -25,18 +24,17 @@ export function useCameraPermission() {
     if (!cameraPermission?.granted) {
       const permissionResponse = await requestCameraPermission();
       if (!permissionResponse.granted) {
-        return null;
+        throw new Error('Allow camera access to take a photo, or choose one from your gallery.');
       }
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
+      allowsEditing: false,
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const uri = result.assets[0].uri;
-      setPhotos((prev) => [...prev, uri]);
       return uri;
     }
     return null;
@@ -44,6 +42,10 @@ export function useCameraPermission() {
 
   const removePhoto = (index: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addPhoto = (uri: string) => {
+    setPhotos((prev) => [...prev, uri]);
   };
 
   const clearPhotos = () => {
@@ -57,6 +59,7 @@ export function useCameraPermission() {
     pickImageFromGallery,
     takePhotoWithCamera,
     photos,
+    addPhoto,
     removePhoto,
     clearPhotos,
   };
