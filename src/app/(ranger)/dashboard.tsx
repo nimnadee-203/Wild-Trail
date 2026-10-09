@@ -27,11 +27,23 @@ import { offlineSyncService } from '../../services/api/offlineSync';
 import { storageService } from '../../storage/asyncStorage';
 import { STORAGE_KEYS } from '../../storage/keys';
 
+function sortPatrolsByPriority(patrols: AssignedPatrol[]): AssignedPatrol[] {
+  const getStatusPriority = (status: string) => {
+    if (status === 'IN_PROGRESS') return 0;
+    if (status === 'ASSIGNED') return 1;
+    if (status === 'COMPLETED') return 2;
+    return 3;
+  };
+  return [...patrols].sort((a, b) => getStatusPriority(a.status) - getStatusPriority(b.status));
+}
+
 export default function DashboardScreen() {
   const router = useRouter();
   const identity = useRangerIdentity();
   const [broadcastSent, setBroadcastSent] = useState(false);
-  const [assignedPatrols, setAssignedPatrols] = useState<AssignedPatrol[]>(MOCK_ASSIGNED_PATROLS);
+  const [assignedPatrols, setAssignedPatrols] = useState<AssignedPatrol[]>(() =>
+    sortPatrolsByPriority(MOCK_ASSIGNED_PATROLS)
+  );
   const [showAllPatrols, setShowAllPatrols] = useState(false);
   const [selectedPatrol, setSelectedPatrol] = useState<AssignedPatrol | null>(null);
   const [rangerStatus, setRangerStatus] = useState<RangerStatus>('AVAILABLE');
@@ -54,7 +66,7 @@ export default function DashboardScreen() {
 
       const response = await patrolApiService.getRangerAssignedPatrols('R001');
       if (response.data && response.data.length > 0) {
-        setAssignedPatrols(response.data);
+        setAssignedPatrols(sortPatrolsByPriority(response.data));
       }
     } catch {
       // Fall back to MOCK_ASSIGNED_PATROLS
