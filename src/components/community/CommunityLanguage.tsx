@@ -16,7 +16,7 @@ export function CommunityLanguageProvider({ children }: { children: React.ReactN
   const selected = useRef(false);
   useEffect(() => {
     let active = true;
-    void AsyncStorage.getItem(STORAGE_KEY).then(value => {
+    void Promise.resolve(AsyncStorage.getItem(STORAGE_KEY)).then(value => {
       if (active && !selected.current && (value === 'en' || value === 'si' || value === 'ta')) setLanguageState(value);
     }).catch(() => undefined);
     return () => { active = false; };

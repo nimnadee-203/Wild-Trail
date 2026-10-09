@@ -440,27 +440,6 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-<<<<<<< HEAD
-        <TouchableOpacity
-          style={styles.reportIncidentBtn}
-          onPress={() => openRangerIncidentReport()}
-          activeOpacity={0.85}
-        >
-          <View style={styles.reportIncidentIcon}>
-            <Ionicons name="add" size={22} color={Colors.light.primaryDark} />
-          </View>
-          <View style={styles.reportIncidentText}>
-            <Text style={styles.reportIncidentTitle}>Report an Incident</Text>
-            <Text style={styles.reportIncidentSubtitle}>
-              Record a site observation or wildlife incident
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={Colors.light.primaryDark} />
-        </TouchableOpacity>
-
-=======
->>>>>>> test
-
 
         {/* Ranger Shift & Equipment Status */}
         <View style={styles.shiftCard}>

@@ -378,10 +378,10 @@ test.each([new Error('offline'), 'unknown'])(
     queue = [queued('queued')];
     const screen = await mount();
     api.syncCommunityReports.mockRejectedValueOnce(error);
-    await fireEvent.press(screen.getByText('Sync now (1 pending)'));
+    await fireEvent.press(screen.getByText('Sync now (1)'));
     expect(api.syncCommunityReports).toHaveBeenCalledWith(undefined);
     expect(screen.getByText(error.message || 'Sync failed. Retry when connected.')).toBeTruthy();
-    expect(screen.getByText('Sync now (1 pending)')).toBeTruthy();
+    expect(screen.getByText('Sync now (1)')).toBeTruthy();
   },
 );
 test('UC4 network toggle and subscription update online state; queue status/photos display real fallbacks', async () => {
