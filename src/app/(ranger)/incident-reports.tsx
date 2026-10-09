@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getRangerIncidents } from '../../services/api/incidents';
 import { IncidentReport, IncidentStatus, IncidentSeverity } from '../../types/incident';
 import { formatCoordinates } from '../../utils/formatting';
+import { openRangerIncidentReport } from '../../utils/rangerIncidentNavigation';
 import { RangerIncidentOfflinePanel } from '../../components/RangerIncidentOfflinePanel';
 import { getRangerIncidentQueue, isRangerIncidentOnline, subscribeRangerIncidentQueue } from '../../services/rangerIncidentQueue';
 
@@ -29,7 +30,7 @@ const dateLabel = (value: string) => Number.isFinite(Date.parse(value))
   : 'Date unavailable';
 const locationLabel = (report: IncidentReport) => report.location?.address
   || formatCoordinates(report.location?.latitude, report.location?.longitude);
-const newReport = () => router.push('/(ranger)/report-incident');
+const newReport = () => openRangerIncidentReport();
 
 export default function IncidentReportsScreen() {
   const [reports, setReports] = useState<IncidentReport[]>([]);
@@ -122,7 +123,7 @@ export default function IncidentReportsScreen() {
           <RangerIncidentOfflinePanel />
           <Pressable
             style={[s.primary, s.emergency]}
-            onPress={() => router.push({ pathname: '/(ranger)/report-incident', params: { emergency: 'true' } })}
+            onPress={() => openRangerIncidentReport(true)}
             accessibilityRole="button"
             accessibilityLabel="Emergency report"
             accessibilityHint="Open a quick report with Critical priority"

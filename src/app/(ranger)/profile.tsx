@@ -1,4 +1,5 @@
 import { useRangerIdentity } from '../../hooks/useRangerIdentity';
+import { openRangerIncidentReport } from '../../utils/rangerIncidentNavigation';
 import { RangerAvatar } from '../../components/RangerAvatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WildTrailBrand } from '../../components/WildTrailBrand';
@@ -317,7 +318,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => router.push('/(ranger)/report-incident')}
+            onPress={() => openRangerIncidentReport()}
             activeOpacity={0.7}
           >
             <View style={[styles.menuIconWrap, { backgroundColor: '#FEF3C7' }]}>

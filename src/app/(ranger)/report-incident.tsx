@@ -56,17 +56,21 @@ const formatDate = () =>
     .replace(',', '');
 
 export default function ReportIncidentScreen() {
+  const { emergency, reportSession } = useLocalSearchParams<{ emergency?: string; reportSession?: string }>();
+  return <ReportIncidentForm key={`${reportSession ?? 'initial'}:${emergency === 'true'}`} emergency={emergency === 'true'} />;
+}
+
+function ReportIncidentForm({ emergency }: { emergency: boolean }) {
   const router = useRouter();
-  const { emergency } = useLocalSearchParams<{ emergency?: string }>();
-  const [isEmergency, setIsEmergency] = useState(emergency === 'true');
+  const [isEmergency, setIsEmergency] = useState(emergency);
   const { photos, takePhotoWithCamera, pickImageFromGallery, addPhoto, removePhoto } = useCameraPermission();
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
   const [isChoosingPhoto, setIsChoosingPhoto] = useState(false);
-  const [step, setStep] = useState(emergency === 'true' ? 2 : 1);
-  const [incidentType, setIncidentType] = useState<IncidentType>(emergency === 'true' ? 'Other' : 'Snare');
-  const [customIncidentType, setCustomIncidentType] = useState(emergency === 'true' ? 'Emergency incident' : '');
+  const [step, setStep] = useState(emergency ? 2 : 1);
+  const [incidentType, setIncidentType] = useState<IncidentType>(emergency ? 'Other' : 'Snare');
+  const [customIncidentType, setCustomIncidentType] = useState(emergency ? 'Emergency incident' : '');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<IncidentSeverity>(emergency === 'true' ? 'critical' : 'medium');
+  const [priority, setPriority] = useState<IncidentSeverity>(emergency ? 'critical' : 'medium');
   const [dateTime] = useState(formatDate);
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [manualLocation, setManualLocation] = useState('');
