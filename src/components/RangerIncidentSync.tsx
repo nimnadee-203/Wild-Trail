@@ -11,7 +11,7 @@ export function RangerIncidentSync() {
       const state = await Network.getNetworkStateAsync();
       if (active) updateRangerIncidentNetwork(state);
     }).catch(() => { if (active) sync(); });
-    const network = Network.addNetworkStateListener(state => {
+    const network = Network.addNetworkStateListener((state: Network.NetworkState) => {
       if (active) updateRangerIncidentNetwork(state);
     });
     const app = AppState.addEventListener('change', state => { if (state === 'active') sync(); });

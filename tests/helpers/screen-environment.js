@@ -6,6 +6,7 @@ jest.mock('expo-router', () => ({
   useRouter: () => require('./screen-environment').router,
   useLocalSearchParams: () => require('./screen-environment').params,
   useFocusEffect: (callback) => require('react').useEffect(callback, [callback]),
+  Stack: { Screen: () => null },
 }));
 jest.mock('../../src/utils/navigation', () => ({ goBackOrReplace: jest.fn() }));
 jest.mock('../../src/components/manager/ManagerShell', () => ({

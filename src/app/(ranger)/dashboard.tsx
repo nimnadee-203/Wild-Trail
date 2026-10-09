@@ -27,11 +27,23 @@ import { offlineSyncService } from '../../services/api/offlineSync';
 import { storageService } from '../../storage/asyncStorage';
 import { STORAGE_KEYS } from '../../storage/keys';
 
+function sortPatrolsByPriority(patrols: AssignedPatrol[]): AssignedPatrol[] {
+  const getStatusPriority = (status: string) => {
+    if (status === 'IN_PROGRESS') return 0;
+    if (status === 'ASSIGNED') return 1;
+    if (status === 'COMPLETED') return 2;
+    return 3;
+  };
+  return [...patrols].sort((a, b) => getStatusPriority(a.status) - getStatusPriority(b.status));
+}
+
 export default function DashboardScreen() {
   const router = useRouter();
   const identity = useRangerIdentity();
   const [broadcastSent, setBroadcastSent] = useState(false);
-  const [assignedPatrols, setAssignedPatrols] = useState<AssignedPatrol[]>(MOCK_ASSIGNED_PATROLS);
+  const [assignedPatrols, setAssignedPatrols] = useState<AssignedPatrol[]>(() =>
+    sortPatrolsByPriority(MOCK_ASSIGNED_PATROLS)
+  );
   const [showAllPatrols, setShowAllPatrols] = useState(false);
   const [selectedPatrol, setSelectedPatrol] = useState<AssignedPatrol | null>(null);
   const [rangerStatus, setRangerStatus] = useState<RangerStatus>('AVAILABLE');
@@ -54,7 +66,7 @@ export default function DashboardScreen() {
 
       const response = await patrolApiService.getRangerAssignedPatrols('R001');
       if (response.data && response.data.length > 0) {
-        setAssignedPatrols(response.data);
+        setAssignedPatrols(sortPatrolsByPriority(response.data));
       }
     } catch {
       // Fall back to MOCK_ASSIGNED_PATROLS
@@ -135,7 +147,9 @@ export default function DashboardScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* On-Duty Ranger Profile Card */}
         <View style={styles.rangerProfileCard}>
-          <RangerAvatar name={identity.name} uri={identity.photo} />
+          <View style={styles.avatarWrapper}>
+            <RangerAvatar name={identity.name} uri={identity.photo} size={54} />
+          </View>
           <View style={styles.rangerProfileInfo}>
             <View style={styles.rangerLabelRow}>
               <Text style={styles.rangerProfileLabel}>ON-DUTY RANGER</Text>
@@ -173,18 +187,6 @@ export default function DashboardScreen() {
               <View style={styles.badgeAndStatusRow}>
                 <View style={styles.assignedPatrolBadge}>
                   <Text style={styles.assignedPatrolBadgeText}>{patrol.id}</Text>
-                </View>
-                <View
-                  style={[
-                    styles.priorityTag,
-                    patrol.priority === 'HIGH'
-                      ? styles.priorityTagHigh
-                      : patrol.priority === 'MEDIUM'
-                        ? styles.priorityTagMedium
-                        : styles.priorityTagLow,
-                  ]}
-                >
-                  <Text style={styles.priorityTagText}>{patrol.priority} PRIORITY</Text>
                 </View>
                 <View
                   style={[
@@ -362,10 +364,22 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Quick Actions Grid */}
-        <TouchableOpacity style={styles.reportIncidentBtn} onPress={() => router.push('/community-operations')}>
-          <Text style={styles.reportIncidentTitle}>Community Reports & Response</Text>
+        {/* Quick Operations & Incident Cards */}
+        <TouchableOpacity
+          style={styles.reportIncidentBtn}
+          onPress={() => router.push('/community-operations')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.reportIncidentIcon}>
+            <Ionicons name="people-outline" size={22} color={Colors.light.primaryDark} />
+          </View>
+          <View style={styles.reportIncidentText}>
+            <Text style={styles.reportIncidentTitle}>Community Reports & Response</Text>
+            <Text style={styles.reportIncidentSubtitle}>Manage community alerts and field operations</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={Colors.light.primaryDark} />
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.reportIncidentBtn}
           onPress={() => router.push('/(ranger)/incident-reports')}
@@ -380,6 +394,7 @@ export default function DashboardScreen() {
           </View>
           <Ionicons name="chevron-forward" size={20} color={Colors.light.primaryDark} />
         </TouchableOpacity>
+
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Quick Operations</Text>
           <Text style={styles.sectionSubtitle}>Standard Field Tools</Text>
@@ -391,8 +406,8 @@ export default function DashboardScreen() {
             onPress={() => router.push('/patrol')}
             activeOpacity={0.85}
           >
-            <View style={[styles.actionIconWrap, { backgroundColor: '#DCFCE7' }]}>
-              <Ionicons name="footsteps" size={24} color="#15803D" />
+            <View style={[styles.actionIconWrap, { backgroundColor: '#ECFDF5' }]}>
+              <Ionicons name="footsteps" size={24} color="#047857" />
             </View>
             <Text style={styles.actionTitle}>Start GPS Patrol</Text>
             <Text style={styles.actionDesc}>Record track points & ranger route</Text>
@@ -403,8 +418,8 @@ export default function DashboardScreen() {
             onPress={() => openRangerIncidentReport()}
             activeOpacity={0.85}
           >
-            <View style={[styles.actionIconWrap, { backgroundColor: '#FEF3C7' }]}>
-              <Ionicons name="camera" size={24} color="#B45309" />
+            <View style={[styles.actionIconWrap, { backgroundColor: '#ECFDF5' }]}>
+              <Ionicons name="camera" size={24} color="#047857" />
             </View>
             <Text style={styles.actionTitle}>Report Incident</Text>
             <Text style={styles.actionDesc}>Poaching, snares & crop damage</Text>
@@ -415,8 +430,8 @@ export default function DashboardScreen() {
             onPress={() => router.push('/map')}
             activeOpacity={0.85}
           >
-            <View style={[styles.actionIconWrap, { backgroundColor: '#E0F2FE' }]}>
-              <Ionicons name="map" size={24} color="#0369A1" />
+            <View style={[styles.actionIconWrap, { backgroundColor: '#ECFDF5' }]}>
+              <Ionicons name="map" size={24} color="#0284C7" />
             </View>
             <Text style={styles.actionTitle}>Live Animal Map</Text>
             <Text style={styles.actionDesc}>GPS collars & geofence zones</Text>
@@ -427,7 +442,7 @@ export default function DashboardScreen() {
             onPress={handleBroadcastAlert}
             activeOpacity={0.85}
           >
-            <View style={[styles.actionIconWrap, { backgroundColor: '#FEE2E2' }]}>
+            <View style={[styles.actionIconWrap, { backgroundColor: '#FEF2F2' }]}>
               <Ionicons name="megaphone" size={24} color="#DC2626" />
             </View>
             <Text style={styles.actionTitle}>
@@ -436,24 +451,6 @@ export default function DashboardScreen() {
             <Text style={styles.actionDesc}>Instant warning SMS to villagers</Text>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.reportIncidentBtn}
-          onPress={() => openRangerIncidentReport()}
-          activeOpacity={0.85}
-        >
-          <View style={styles.reportIncidentIcon}>
-            <Ionicons name="add" size={22} color={Colors.light.primaryDark} />
-          </View>
-          <View style={styles.reportIncidentText}>
-            <Text style={styles.reportIncidentTitle}>Report an Incident</Text>
-            <Text style={styles.reportIncidentSubtitle}>
-              Record a site observation or wildlife incident
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={Colors.light.primaryDark} />
-        </TouchableOpacity>
-
 
 
         {/* Ranger Shift & Equipment Status */}
@@ -498,18 +495,6 @@ export default function DashboardScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalRouteTitle}>{selectedPatrol.name}</Text>
                     <Text style={styles.modalPatrolIdText}>{selectedPatrol.id}</Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.priorityTag,
-                      selectedPatrol.priority === 'HIGH'
-                        ? styles.priorityTagHigh
-                        : selectedPatrol.priority === 'MEDIUM'
-                          ? styles.priorityTagMedium
-                          : styles.priorityTagLow,
-                    ]}
-                  >
-                    <Text style={styles.priorityTagText}>{selectedPatrol.priority} PRIORITY</Text>
                   </View>
                 </View>
 
@@ -717,11 +702,15 @@ const styles = StyleSheet.create({
     borderColor: '#E2EDF0',
     padding: 18,
     marginBottom: 18,
+    gap: 16,
     shadowColor: '#11382B',
     shadowOpacity: 0.06,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
     elevation: 2,
+  },
+  avatarWrapper: {
+    marginRight: 16,
   },
   rangerAvatar: {
     width: 54,
@@ -729,7 +718,6 @@ const styles = StyleSheet.create({
     borderRadius: 27,
     borderWidth: 2.5,
     borderColor: '#059669',
-    marginRight: 14,
   },
   rangerProfileInfo: {
     flex: 1,
@@ -903,11 +891,11 @@ const styles = StyleSheet.create({
   },
   cardProgressContainer: {
     marginTop: 18,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F4F8F6',
     padding: 15,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E2EDF0',
   },
   cardProgressHeader: {
     flexDirection: 'row',
