@@ -18,6 +18,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
 import { patrolApiService } from '../../../services/api/patrols';
 import { RangerStatus } from '../../../types/patrol';
+import { alertDispatchService } from '../../../services/alertDispatchService';
 
 export default function ResponseConfirmationScreen() {
   const router = useRouter();
@@ -54,6 +55,7 @@ export default function ResponseConfirmationScreen() {
       if (id) {
         const alertRef = doc(db, 'alerts', id as string);
         await updateDoc(alertRef, { status: 'RESOLVED' });
+        await alertDispatchService.resolveAlert(id as string);
       }
     } catch (error) {
       console.error(error);

@@ -110,7 +110,7 @@ const alerts = [
     status: 'PENDING',
     image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Asian_elephant_-_melbourne_zoo.jpg/320px-Asian_elephant_-_melbourne_zoo.jpg',
     description: 'Tracked collar GPS logged crossing outer boundary fence into cultivated paddies.',
-    latitude: '6.298245° S',
+    latitude: '6.298245° N',
     longitude: '81.339256° E',
   },
   {
@@ -123,7 +123,7 @@ const alerts = [
     status: 'ACKNOWLEDGED',
     image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Elephant_near_ndutu.jpg/320px-Elephant_near_ndutu.jpg',
     description: 'Herd moving along southern migration corridor towards agricultural transition zone.',
-    latitude: '6.301122° S',
+    latitude: '6.301122° N',
     longitude: '81.341100° E',
   },
 ];

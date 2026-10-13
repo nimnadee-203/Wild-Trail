@@ -16,6 +16,7 @@ import Colors from '../../../constants/colors';
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
 import { WildlifeAlertImage } from '../../../components/WildlifeAlertImage';
+import { AlertLifecycleStatus } from '../../../types/wildlife';
 
 interface AlertData {
   id: string;
@@ -25,7 +26,7 @@ interface AlertData {
   distance: string;
   level: 'HIGH' | 'MEDIUM' | 'LOW';
   timestamp: string;
-  status: 'PENDING' | 'ACKNOWLEDGED' | 'RESPONDED';
+  status: AlertLifecycleStatus;
   image: string;
   description: string;
 }
@@ -53,7 +54,16 @@ export default function AlertsScreen() {
     return a.level === filter;
   });
 
+  const activeAlertsCount = alerts.filter(
+    (a) => a.status !== 'RESOLVED'
+  ).length;
+
   const handleAcknowledge = async (id: string, animalId: string) => {
+    const targetAlert = alerts.find((a) => a.id === id);
+    if (targetAlert && targetAlert.status !== 'PENDING' && targetAlert.status !== 'NEW') {
+      return; // An already acknowledged or resolved alert must not be acknowledged again
+    }
+
     try {
       const alertRef = doc(db, 'alerts', id);
       await updateDoc(alertRef, { status: 'ACKNOWLEDGED' });
@@ -73,6 +83,15 @@ export default function AlertsScreen() {
   };
 
   const handleDispatch = (id: string, animalId: string, location: string) => {
+    const targetAlert = alerts.find((a) => a.id === id);
+    if (targetAlert?.status === 'RESOLVED') {
+      if (Platform.OS === 'web') {
+        window.alert('Cannot dispatch team to an already resolved alert.');
+      } else {
+        Alert.alert('Alert Resolved', 'Cannot dispatch team to an already resolved alert.');
+      }
+      return; // Resolved alerts must not allow new team dispatches unless explicitly reopened
+    }
     if (Platform.OS === 'web') {
       const confirmed = window.confirm(`Dispatch nearest field ranger unit to ${location} for ${animalId}?`);
       if (confirmed) {
@@ -131,7 +150,7 @@ export default function AlertsScreen() {
         </View>
 
         <View style={styles.alertCountBadge}>
-          <Text style={styles.alertCountText}>{alerts.length} Active</Text>
+          <Text style={styles.alertCountText}>{activeAlertsCount} Active</Text>
         </View>
       </View>
 
@@ -241,12 +260,27 @@ export default function AlertsScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.dispatchBtn}
+                style={[
+                  styles.dispatchBtn,
+                  alert.status === 'RESOLVED' && styles.btnDisabled,
+                ]}
                 onPress={() => handleDispatch(alert.id, alert.animalId, alert.location)}
+                disabled={alert.status === 'RESOLVED'}
                 activeOpacity={0.8}
               >
-                <Ionicons name="navigate-outline" size={16} color={Colors.light.primaryDark} />
-                <Text style={styles.dispatchBtnText}>Dispatch Team</Text>
+                <Ionicons
+                  name="navigate-outline"
+                  size={16}
+                  color={alert.status === 'RESOLVED' ? '#6B7280' : Colors.light.primaryDark}
+                />
+                <Text
+                  style={[
+                    styles.dispatchBtnText,
+                    alert.status === 'RESOLVED' && styles.btnDisabledText,
+                  ]}
+                >
+                  Dispatch Team
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity

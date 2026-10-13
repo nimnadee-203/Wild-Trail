@@ -9,6 +9,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,11 +20,32 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
 import { patrolApiService } from '../../../services/api/patrols';
 import { WildlifeAlertImage } from '../../../components/WildlifeAlertImage';
+import { alertDispatchService } from '../../../services/alertDispatchService';
+
+const DECLINE_REASONS = [
+  'Currently handling another incident',
+  'Too far from the location',
+  'Unavailable',
+  'Other reason',
+] as const;
+
+function normalizeHemisphereLat(lat: any) {
+  if (typeof lat === 'string' && lat.includes('° S')) {
+    const num = parseFloat(lat);
+    if (num >= 5 && num <= 10) {
+      return lat.replace('° S', '° N');
+    }
+  }
+  return lat;
+}
 
 export default function AlertDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [alert, setAlert] = useState<any>(null);
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [selectedReason, setSelectedReason] = useState<string>(DECLINE_REASONS[0]);
+  const [customReason, setCustomReason] = useState('');
 
   useEffect(() => {
     const fetchAlert = async () => {
@@ -142,7 +166,7 @@ export default function AlertDetailsScreen() {
             <Ionicons name="location" size={24} color="#1F2937" />
             <View>
               <Text style={styles.coordTitle}>Location Coordinates</Text>
-              <Text style={styles.coordVal}>Latitude: {alert.latitude}</Text>
+              <Text style={styles.coordVal}>Latitude: {normalizeHemisphereLat(alert.latitude)}</Text>
               <Text style={styles.coordVal}>Longitude: {alert.longitude}</Text>
             </View>
           </View>
@@ -151,25 +175,173 @@ export default function AlertDetailsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Action Button */}
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={async () => {
-            try {
-              const docRef = doc(db, 'alerts', alert.id);
-              await updateDoc(docRef, { status: 'RESPONDED' });
-            } catch (error) {
-              console.error(error);
-            }
-            // Transition Ranger Status to RESPONDING_TO_ALERT
-            await patrolApiService.setRangerStatus('RESPONDING_TO_ALERT');
-            router.push({ pathname: '/alerts/confirm', params: { id: alert.id } });
-          }}
-          activeOpacity={0.8}
+        {/* Actions or Completed State Banner */}
+        {alert.status === 'RESOLVED' || alert.status === 'RESPONDED' ? (
+          <View style={styles.completedBanner}>
+            <Ionicons name="checkmark-done-circle" size={26} color={Colors.light.success} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.completedBannerTitle}>Response Completed</Text>
+              <Text style={styles.completedBannerSubtitle}>
+                {alert.status === 'RESOLVED'
+                  ? 'This wildlife risk alert has been resolved. No further response action is required.'
+                  : 'Active tactical response is in progress or completed.'}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <>
+            {/* Action Button */}
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={async () => {
+                try {
+                  const docRef = doc(db, 'alerts', alert.id);
+                  await updateDoc(docRef, { status: 'RESPONDED' });
+                } catch (error) {
+                  console.error(error);
+                }
+                // Transition Ranger Status to RESPONDING_TO_ALERT
+                await patrolApiService.setRangerStatus('RESPONDING_TO_ALERT');
+                router.push({ pathname: '/alerts/confirm', params: { id: alert.id } });
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.actionBtnText}>Acknowledge & Respond</Text>
+              <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            {/* Cannot Respond Button */}
+            <TouchableOpacity
+              style={styles.cannotRespondBtn}
+              onPress={() => setShowDeclineModal(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="close-circle-outline" size={20} color={Colors.light.danger} />
+              <Text style={styles.cannotRespondBtnText}>Cannot Respond</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {/* Cannot Respond Confirmation & Reason Modal */}
+        <Modal
+          visible={showDeclineModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowDeclineModal(false)}
         >
-          <Text style={styles.actionBtnText}>Acknowledge & Respond</Text>
-          <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <Ionicons name="alert-circle" size={26} color={Colors.light.danger} />
+                <Text style={styles.modalTitle}>Cannot Respond to Alert</Text>
+              </View>
+              <Text style={styles.modalMessage}>
+                Are you sure you cannot respond to this wildlife alert?
+              </Text>
+
+              <Text style={styles.reasonPrompt}>Select reason for declining:</Text>
+              {DECLINE_REASONS.map((reason) => (
+                <TouchableOpacity
+                  key={reason}
+                  style={[
+                    styles.reasonOption,
+                    selectedReason === reason && styles.reasonOptionSelected,
+                  ]}
+                  onPress={() => setSelectedReason(reason)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={selectedReason === reason ? 'radio-button-on' : 'radio-button-off'}
+                    size={18}
+                    color={selectedReason === reason ? Colors.light.primary : '#9CA3AF'}
+                  />
+                  <Text
+                    style={[
+                      styles.reasonText,
+                      selectedReason === reason && styles.reasonTextSelected,
+                    ]}
+                  >
+                    {reason}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+
+              {selectedReason === 'Other reason' && (
+                <TextInput
+                  style={styles.customReasonInput}
+                  placeholder="Enter details..."
+                  placeholderTextColor="#9CA3AF"
+                  value={customReason}
+                  onChangeText={setCustomReason}
+                />
+              )}
+
+              <View style={styles.modalActionRow}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setShowDeclineModal(false)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.modalConfirmBtn}
+                  onPress={async () => {
+                    const finalReason =
+                      selectedReason === 'Other reason' && customReason.trim()
+                        ? `Other: ${customReason.trim()}`
+                        : selectedReason;
+
+                    try {
+                      const result = await alertDispatchService.recordCannotRespond(
+                        alert.id,
+                        {
+                          id: 'ranger-204',
+                          name: 'Ranger Nimal Perera',
+                          role: 'ranger',
+                        },
+                        finalReason
+                      );
+
+                      const docRef = doc(db, 'alerts', alert.id);
+                      await updateDoc(docRef, {
+                        declineReason: finalReason,
+                        declinedAt: new Date().toISOString(),
+                        declinedResponders: result.alert.declinedResponders,
+                        assignedResponder: result.alert.assignedResponder || null,
+                        status: result.escalated ? 'ESCALATED' : 'PENDING',
+                        ...(result.escalated
+                          ? {
+                              escalatedAt: result.alert.escalatedAt,
+                              escalationReason: result.alert.escalationReason,
+                            }
+                          : {}),
+                      });
+                    } catch (err) {
+                      console.error(err);
+                    }
+
+                    setShowDeclineModal(false);
+
+                    const confirmMsg =
+                      'You have declined this alert. It will be offered to another available responder.';
+                    if (Platform.OS === 'web') {
+                      window.alert(confirmMsg);
+                    } else {
+                      Alert.alert('Alert Declined', confirmMsg);
+                    }
+
+                    goBackOrReplace('/(ranger)/alerts');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.modalConfirmText}>Confirm</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -434,5 +606,149 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  cannotRespondBtn: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 12,
+    borderWidth: 1.5,
+    borderColor: '#FCA5A5',
+  },
+  cannotRespondBtnText: {
+    color: Colors.light.danger,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 420,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  reasonPrompt: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 10,
+  },
+  reasonOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 8,
+    gap: 10,
+  },
+  reasonOptionSelected: {
+    borderColor: Colors.light.primary,
+    backgroundColor: '#F0FDF4',
+  },
+  reasonText: {
+    fontSize: 14,
+    color: '#4B5563',
+  },
+  reasonTextSelected: {
+    color: '#111827',
+    fontWeight: '600',
+  },
+  customReasonInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#111827',
+    marginBottom: 16,
+  },
+  modalActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#4B5563',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: Colors.light.danger,
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  completedBanner: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginTop: 8,
+  },
+  completedBannerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#166534',
+  },
+  completedBannerSubtitle: {
+    fontSize: 13,
+    color: '#15803D',
+    marginTop: 2,
+    lineHeight: 18,
   },
 });
