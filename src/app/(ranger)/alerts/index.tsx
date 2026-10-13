@@ -29,6 +29,15 @@ interface AlertData {
   status: AlertLifecycleStatus;
   image: string;
   description: string;
+  acceptedBy?: string;
+  acceptedBadge?: string;
+  acceptedAt?: string;
+  assignedResponder?: {
+    responderId?: string;
+    responderName?: string;
+    responderRole?: string;
+    badge?: string;
+  };
 }
 
 export default function AlertsScreen() {
@@ -61,12 +70,61 @@ export default function AlertsScreen() {
   const handleAcknowledge = async (id: string, animalId: string) => {
     const targetAlert = alerts.find((a) => a.id === id);
     if (targetAlert && targetAlert.status !== 'PENDING' && targetAlert.status !== 'NEW') {
+      const responder =
+        targetAlert.acceptedBy ||
+        targetAlert.assignedResponder?.responderName ||
+        'Ranger Nimal Perera (RG-204)';
+      const msg = `This alert has already been accepted by ${responder}.`;
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Alert Already Accepted', msg);
+      }
       return; // An already acknowledged or resolved alert must not be acknowledged again
     }
+
+    const currentRanger = 'Ranger Nimal Perera';
+    const currentBadge = 'RG-204';
+
+    // Optimistically update local state so UI updates immediately
+    setAlerts((prev) =>
+      prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              status: 'ACKNOWLEDGED',
+              acceptedBy: currentRanger,
+              acceptedBadge: currentBadge,
+              acceptedAt: new Date().toISOString(),
+              assignedResponder: {
+                responderId: 'ranger-204',
+                responderName: currentRanger,
+                responderRole: 'ranger',
+                badge: currentBadge,
+              },
+            }
+          : a
+      )
+    );
 
     try {
       const alertRef = doc(db, 'alerts', id);
       await updateDoc(alertRef, { status: 'ACKNOWLEDGED' });
+      try {
+        await updateDoc(alertRef, {
+          acceptedBy: currentRanger,
+          acceptedBadge: currentBadge,
+          acknowledgedAt: new Date().toISOString(),
+          assignedResponder: {
+            responderId: 'ranger-204',
+            responderName: currentRanger,
+            responderRole: 'ranger',
+            badge: currentBadge,
+            assignedAt: new Date().toISOString(),
+          },
+        });
+      } catch {}
+
       if (Platform.OS === 'web') {
         window.alert(`Officer response logged for ${animalId}. Sector rangers notified.`);
       } else {
@@ -240,6 +298,28 @@ export default function AlertsScreen() {
             </View>
 
             <Text style={styles.descriptionText}>{alert.description}</Text>
+
+            {/* Accepted Responder Badge for Team Visibility */}
+            {alert.status !== 'PENDING' && (
+              <View style={styles.acceptedByRow}>
+                <Ionicons
+                  name={alert.status === 'RESOLVED' ? 'checkmark-circle' : 'shield-checkmark'}
+                  size={15}
+                  color={alert.status === 'RESOLVED' ? '#059669' : '#047857'}
+                />
+                <Text style={styles.acceptedByText}>
+                  {alert.acceptedBy
+                    ? `Accepted by ${alert.acceptedBy}${alert.acceptedBadge ? ` (${alert.acceptedBadge})` : ''}`
+                    : alert.assignedResponder?.responderName
+                    ? `Accepted by ${alert.assignedResponder.responderName}${alert.assignedResponder.badge ? ` (${alert.assignedResponder.badge})` : ''}`
+                    : alert.status === 'ACKNOWLEDGED'
+                    ? 'Accepted by Ranger Nimal (RG-204)'
+                    : alert.status === 'RESPONDED'
+                    ? 'Response Deployed by Ranger Nimal (RG-204)'
+                    : 'Response Completed'}
+                </Text>
+              </View>
+            )}
 
             {/* Action Buttons */}
             <View style={styles.actionsRow}>
@@ -520,7 +600,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     padding: 10,
     borderRadius: 8,
-    marginBottom: 12,
+    marginBottom: 10,
+  },
+
+  acceptedByRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  acceptedByText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#065F46',
+    flex: 1,
   },
 
   actionsRow: {

@@ -157,7 +157,13 @@ export default function ResponseConfirmationScreen() {
           <View style={styles.detailRow}>
             <Ionicons name="person" size={18} color="#4B5563" style={styles.detailIcon} />
             <Text style={styles.detailLabel}>Assigned Actor</Text>
-            <Text style={styles.detailValue}>Ranger Nimal (Group 027)</Text>
+            <Text style={styles.detailValue}>
+              {alertData.acceptedBy
+                ? `${alertData.acceptedBy} (${alertData.acceptedBadge || 'RG-204'})`
+                : alertData.assignedResponder?.responderName
+                ? `${alertData.assignedResponder.responderName}`
+                : 'Ranger Nimal Perera (RG-204)'}
+            </Text>
           </View>
         </View>
 

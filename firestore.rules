@@ -139,5 +139,9 @@ service cloud.firestore {
     match /rangers/{rangerId} {
       allow read: if isTemporaryManagerReader() || isManager();
     }
+
+    match /alerts/{alertId} {
+      allow read, write: if true;
+    }
   }
 }

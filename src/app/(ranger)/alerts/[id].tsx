@@ -120,6 +120,19 @@ export default function AlertDetailsScreen() {
               <Text style={styles.detailLabel}>Last Detected</Text>
               <Text style={styles.detailValue}>{alert.timestamp}</Text>
             </View>
+            <View style={styles.detailRow}>
+              <Ionicons name="person" size={18} color="#4B5563" style={styles.detailIcon} />
+              <Text style={styles.detailLabel}>Assigned Ranger</Text>
+              <Text style={styles.detailValue}>
+                {alert.acceptedBy
+                  ? `${alert.acceptedBy}${alert.acceptedBadge ? ` (${alert.acceptedBadge})` : ''}`
+                  : alert.assignedResponder?.responderName
+                  ? `${alert.assignedResponder.responderName}`
+                  : alert.status !== 'PENDING'
+                  ? 'Ranger Nimal Perera (RG-204)'
+                  : 'Unassigned (Open)'}
+              </Text>
+            </View>
           </View>
 
           {/* Map Snippet */}
@@ -200,9 +213,25 @@ export default function AlertDetailsScreen() {
                   else Alert.alert('Notice', msg);
                   return;
                 }
+                const currentResponderName = 'Ranger Nimal Perera';
+                const currentResponderBadge = 'RG-204';
                 try {
                   const docRef = doc(db, 'alerts', alert.id);
                   await updateDoc(docRef, { status: 'RESPONDED' });
+                  try {
+                    await updateDoc(docRef, {
+                      acceptedBy: currentResponderName,
+                      acceptedBadge: currentResponderBadge,
+                      respondedAt: new Date().toISOString(),
+                      assignedResponder: {
+                        responderId: 'ranger-204',
+                        responderName: currentResponderName,
+                        responderRole: 'ranger',
+                        badge: currentResponderBadge,
+                        assignedAt: new Date().toISOString(),
+                      },
+                    });
+                  } catch {}
                   await alertDispatchService.dispatchTeam(alert.id);
                 } catch (error) {
                   console.error(error);
