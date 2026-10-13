@@ -92,6 +92,14 @@ export default function AlertsScreen() {
       }
       return; // Resolved alerts must not allow new team dispatches unless explicitly reopened
     }
+    if (targetAlert?.status === 'RESPONDED') {
+      if (Platform.OS === 'web') {
+        window.alert('Cannot dispatch team: this alert has already been responded to.');
+      } else {
+        Alert.alert('Already Responded', 'Cannot dispatch team: this alert has already been responded to.');
+      }
+      return;
+    }
     if (Platform.OS === 'web') {
       const confirmed = window.confirm(`Dispatch nearest field ranger unit to ${location} for ${animalId}?`);
       if (confirmed) {
@@ -262,24 +270,24 @@ export default function AlertsScreen() {
               <TouchableOpacity
                 style={[
                   styles.dispatchBtn,
-                  alert.status === 'RESOLVED' && styles.btnDisabled,
+                  (alert.status === 'RESOLVED' || alert.status === 'RESPONDED') && styles.btnDisabled,
                 ]}
                 onPress={() => handleDispatch(alert.id, alert.animalId, alert.location)}
-                disabled={alert.status === 'RESOLVED'}
+                disabled={alert.status === 'RESOLVED' || alert.status === 'RESPONDED'}
                 activeOpacity={0.8}
               >
                 <Ionicons
                   name="navigate-outline"
                   size={16}
-                  color={alert.status === 'RESOLVED' ? '#6B7280' : Colors.light.primaryDark}
+                  color={alert.status === 'RESOLVED' || alert.status === 'RESPONDED' ? '#6B7280' : Colors.light.primaryDark}
                 />
                 <Text
                   style={[
                     styles.dispatchBtnText,
-                    alert.status === 'RESOLVED' && styles.btnDisabledText,
+                    (alert.status === 'RESOLVED' || alert.status === 'RESPONDED') && styles.btnDisabledText,
                   ]}
                 >
-                  Dispatch Team
+                  {alert.status === 'RESOLVED' ? 'Resolved' : alert.status === 'RESPONDED' ? 'Responded' : 'Dispatch Team'}
                 </Text>
               </TouchableOpacity>
 

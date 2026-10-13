@@ -51,6 +51,17 @@ export default function ResponseConfirmationScreen() {
   }, []);
 
   const handleCompleteResponse = async () => {
+    if (alertData?.status === 'RESOLVED') {
+      const msg = 'This alert response has already been completed.';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Notice', msg);
+      }
+      router.push('/dashboard');
+      return;
+    }
+
     try {
       if (id) {
         const alertRef = doc(db, 'alerts', id as string);

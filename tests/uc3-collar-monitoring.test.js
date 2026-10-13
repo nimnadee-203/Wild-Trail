@@ -611,6 +611,27 @@ describe('UC3 Collar Monitoring and Risk Alert System', () => {
         role: 'ranger',
       }),
     ).rejects.toThrow('Alert has already been acknowledged');
+
+    // Dispatching sets status to RESPONDED
+    await dispatchService.dispatchTeam(alert.alertId);
+
+    // Responded alert cannot be acknowledged again
+    await expect(
+      dispatchService.acknowledgeAlert(alert.alertId, {
+        id: 'ranger-105',
+        name: 'Ranger Sunil Rathnayake',
+        role: 'ranger',
+      }),
+    ).rejects.toThrow('Cannot acknowledge an alert that has already been responded to');
+
+    // Responded alert cannot be declined
+    await expect(
+      dispatchService.recordCannotRespond(
+        alert.alertId,
+        { id: 'ranger-105', name: 'Ranger Sunil Rathnayake', role: 'ranger' },
+        'Unavailable',
+      ),
+    ).rejects.toThrow('Cannot decline an alert that has already been responded to');
   });
 
   // 22. An alert with completed response must not show Acknowledge & Respond or Cannot Respond
@@ -656,6 +677,11 @@ describe('UC3 Collar Monitoring and Risk Alert System', () => {
     await dispatchService.reopenAlert(alert.alertId, 'Renewed boundary incursion');
     const dispatched = await dispatchService.dispatchTeam(alert.alertId);
     expect(dispatched.status).toBe('RESPONDED');
+
+    // Dispatching an already responded alert must throw
+    await expect(dispatchService.dispatchTeam(alert.alertId)).rejects.toThrow(
+      'Cannot dispatch team to an alert that has already been responded to',
+    );
   });
 
   // 24. Clear and consistent meanings for statuses

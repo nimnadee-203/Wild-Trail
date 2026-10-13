@@ -194,9 +194,16 @@ export default function AlertDetailsScreen() {
             <TouchableOpacity
               style={styles.actionBtn}
               onPress={async () => {
+                if (alert.status === 'RESOLVED' || alert.status === 'RESPONDED') {
+                  const msg = 'This alert has already been responded to or resolved.';
+                  if (Platform.OS === 'web') window.alert(msg);
+                  else Alert.alert('Notice', msg);
+                  return;
+                }
                 try {
                   const docRef = doc(db, 'alerts', alert.id);
                   await updateDoc(docRef, { status: 'RESPONDED' });
+                  await alertDispatchService.dispatchTeam(alert.id);
                 } catch (error) {
                   console.error(error);
                 }
@@ -288,6 +295,14 @@ export default function AlertDetailsScreen() {
                 <TouchableOpacity
                   style={styles.modalConfirmBtn}
                   onPress={async () => {
+                    if (alert.status === 'RESOLVED' || alert.status === 'RESPONDED') {
+                      const msg = 'Cannot decline an alert that has already been responded to or resolved.';
+                      if (Platform.OS === 'web') window.alert(msg);
+                      else Alert.alert('Notice', msg);
+                      setShowDeclineModal(false);
+                      return;
+                    }
+
                     const finalReason =
                       selectedReason === 'Other reason' && customReason.trim()
                         ? `Other: ${customReason.trim()}`

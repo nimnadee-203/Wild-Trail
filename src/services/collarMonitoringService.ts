@@ -303,14 +303,8 @@ export class CollarMonitoringService {
       timestamp: reading.timestamp,
     };
 
-    // Check animal's position against configured risk zones
-    let detectedZone: RiskZone | null = null;
-    for (const zone of this.riskZones.values()) {
-      if (zone.isPointInside(reading.latitude, reading.longitude)) {
-        detectedZone = zone;
-        break; // Select highest-priority matched zone
-      }
-    }
+    // Check animal's position against configured risk zones (UML: +checkRiskZone)
+    const detectedZone = this.checkRiskZone(reading.latitude, reading.longitude);
 
     // Outside all risk zones -> Safe
     if (!detectedZone) {
@@ -323,13 +317,8 @@ export class CollarMonitoringService {
       };
     }
 
-    // Animal has entered a risk zone
-    // Create new risk alert through the alert dispatch service
-    const alert = await this.dispatchService.createAlertFromCollarReading({
-      animal,
-      riskZone: detectedZone,
-      reading,
-    });
+    // Animal has entered a risk zone (UML: +createAlert)
+    const alert = await this.createAlert(animal, detectedZone, reading);
 
     return {
       status: 'ALERT_CREATED',
@@ -338,6 +327,43 @@ export class CollarMonitoringService {
       riskZone: detectedZone,
       alert,
     };
+  }
+
+  /**
+   * UML Method: +evaluateLocation()
+   * Evaluates and validates incoming coordinates and telemetry reading.
+   */
+  public evaluateLocation(reading: unknown): ReadingValidationResult {
+    return this.validateLocationReading(reading);
+  }
+
+  /**
+   * UML Method: +checkRiskZone()
+   * Evaluates geographic coordinates against configured risk zones.
+   */
+  public checkRiskZone(latitude: number, longitude: number): RiskZone | null {
+    for (const zone of this.riskZones.values()) {
+      if (zone.isPointInside(latitude, longitude)) {
+        return zone;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * UML Method: +createAlert()
+   * Generates a new risk alert through the alert dispatch service.
+   */
+  public async createAlert(
+    animal: TrackedAnimal,
+    riskZone: RiskZone,
+    reading: LocationReading
+  ): Promise<WildlifeRiskAlert> {
+    return this.dispatchService.createAlertFromCollarReading({
+      animal,
+      riskZone,
+      reading,
+    });
   }
 }
 

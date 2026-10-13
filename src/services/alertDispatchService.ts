@@ -256,6 +256,10 @@ export class AlertDispatchService {
       throw new Error('Cannot acknowledge an already resolved alert');
     }
 
+    if (alert.status === 'RESPONDED') {
+      throw new Error('Cannot acknowledge an alert that has already been responded to');
+    }
+
     if (alert.status === 'ACKNOWLEDGED') {
       throw new Error('Alert has already been acknowledged');
     }
@@ -323,6 +327,10 @@ export class AlertDispatchService {
 
     if (alert.status === 'RESOLVED') {
       throw new Error('Cannot decline an already resolved alert');
+    }
+
+    if (alert.status === 'RESPONDED') {
+      throw new Error('Cannot decline an alert that has already been responded to');
     }
 
     const timestamp = new Date().toISOString();
@@ -504,6 +512,10 @@ export class AlertDispatchService {
 
     if (alert.status === 'RESOLVED') {
       throw new Error('Cannot dispatch team to an already resolved alert');
+    }
+
+    if (alert.status === 'RESPONDED') {
+      throw new Error('Cannot dispatch team to an alert that has already been responded to');
     }
 
     alert.status = 'RESPONDED';
